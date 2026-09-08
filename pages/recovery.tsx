@@ -1,5 +1,4 @@
 import { RecoveryFlow, UpdateRecoveryFlowBody } from "@ory/client"
-import { CardTitle } from "@ory/themes"
 import { AxiosError } from "axios"
 import type { NextPage } from "next"
 import Head from "next/head"
@@ -7,59 +6,47 @@ import Link from "next/link"
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
 
-import { Flow, ActionCard, CenterLink, MarginCard } from "../pkg"
+import { Flow } from "../pkg"
 import { handleFlowError } from "../pkg/errors"
 import ory from "../pkg/sdk"
+import { AuthFooter } from "../pkg/ui/AuthFooter"
+import { KChrome } from "../pkg/ui/KChrome"
+import { KIcon } from "../pkg/ui/KIcon"
 
 const Recovery: NextPage = () => {
   const [flow, setFlow] = useState<RecoveryFlow>()
 
-  // Get ?flow=... from the URL
   const router = useRouter()
   const { flow: flowId, return_to: returnTo } = router.query
 
   useEffect(() => {
-    // If the router is not ready yet, or we already have a flow, do nothing.
-    if (!router.isReady || flow) {
-      return
-    }
+    if (!router.isReady || flow) return
 
-    // If ?flow=.. was in the URL, we fetch it
     if (flowId) {
       ory
         .getRecoveryFlow({ id: String(flowId) })
-        .then(({ data }) => {
-          setFlow(data)
-        })
+        .then(({ data }) => setFlow(data))
         .catch(handleFlowError(router, "recovery", setFlow))
       return
     }
 
-    // Otherwise we initialize it
     ory
       .createBrowserRecoveryFlow({
         returnTo: String(returnTo || ""),
       })
-      .then(({ data }) => {
-        setFlow(data)
-      })
+      .then(({ data }) => setFlow(data))
       .catch(handleFlowError(router, "recovery", setFlow))
       .catch((err: AxiosError<RecoveryFlow>) => {
-        // If the previous handler did not catch the error it's most likely a form validation error
         if (err.response?.status === 400) {
-          // Yup, it is!
           setFlow(err.response?.data)
           return
         }
-
-        return Promise.reject(err)
+        throw err
       })
   }, [flowId, router, router.isReady, returnTo, flow])
 
   const onSubmit = (values: UpdateRecoveryFlowBody) =>
     router
-      // On submission, add the flow ID to the URL but do not navigate. This prevents the user loosing
-      // his data when she/he reloads the page.
       .push(`/recovery?flow=${flow?.id}`, undefined, { shallow: true })
       .then(() =>
         ory
@@ -67,19 +54,14 @@ const Recovery: NextPage = () => {
             flow: String(flow?.id),
             updateRecoveryFlowBody: values,
           })
-          .then(({ data }) => {
-            // Form submission was successful, show the message to the user!
-            setFlow(data)
-          })
+          .then(({ data }) => setFlow(data))
           .catch(handleFlowError(router, "recovery", setFlow))
           .catch((err: AxiosError<RecoveryFlow>) => {
             switch (err.response?.status) {
               case 400:
-                // Status code 400 implies the form validation had an error
                 setFlow(err.response?.data)
                 return
             }
-
             throw err
           }),
       )
@@ -87,18 +69,61 @@ const Recovery: NextPage = () => {
   return (
     <>
       <Head>
-        <title>Recover your account - Ory NextJS Integration Example</title>
-        <meta name="description" content="NextJS + React + Vercel + Ory" />
+        <title>Recover your account · Medusa</title>
+        <meta name="description" content="Recover your Medusa account" />
       </Head>
-      <MarginCard>
-        <CardTitle>Recover your account</CardTitle>
-        <Flow onSubmit={onSubmit} flow={flow} />
-      </MarginCard>
-      <ActionCard>
-        <Link href="/" passHref>
-          <CenterLink>Go back</CenterLink>
-        </Link>
-      </ActionCard>
+
+      <KChrome />
+
+      <div className="kauth">
+        <div className="kcard kcard-enter">
+          {/* Back link */}
+          <Link href="/login" passHref>
+            <a
+              className="klink"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 18,
+                fontSize: 13.5,
+              }}
+            >
+              <KIcon name="arrowLeft" size={15} />
+              Back
+            </a>
+          </Link>
+
+          {/* Title */}
+          <div style={{ marginBottom: 24 }}>
+            <h1
+              style={{
+                fontSize: 21,
+                fontWeight: 600,
+                letterSpacing: "-0.02em",
+                margin: 0,
+                color: "var(--fg-0)",
+              }}
+            >
+              Reset your password
+            </h1>
+            <p
+              style={{
+                fontSize: 13.5,
+                color: "var(--fg-2)",
+                margin: "8px 0 0",
+                lineHeight: 1.5,
+              }}
+            >
+              Enter your account email and we&apos;ll send a recovery code.
+            </p>
+          </div>
+
+          <Flow onSubmit={onSubmit} flow={flow} />
+
+          <AuthFooter />
+        </div>
+      </div>
     </>
   )
 }

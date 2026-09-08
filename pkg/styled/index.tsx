@@ -1,45 +1,42 @@
-import {
-  Card,
-  LinkButton,
-  typographyH2Styles,
-  typographyLinkStyles,
-} from "@ory/themes"
-import cn from "classnames"
-import styled from "styled-components"
+import { ReactNode } from "react"
 
-export const MarginCard = styled(Card)`
-  margin-top: 70px;
-  margin-bottom: 18px;
-`
+export const MarginCard = ({
+  children,
+  wide,
+}: {
+  children: ReactNode
+  wide?: boolean
+}) => <>{children}</>
 
-export const ActionCard = styled(Card)`
-  margin-bottom: 18px;
-`
+export const ActionCard = ({
+  children,
+  wide,
+}: {
+  children: ReactNode
+  wide?: boolean
+}) => <>{children}</>
 
-export const CenterLink = styled.a`
-  ${typographyH2Styles};
-  ${typographyLinkStyles};
-  text-align: center;
-  font-size: 15px;
-`
-
-export const TextLeftButton = styled(LinkButton)`
-  box-sizing: border-box;
-
-  & .linkButton {
-    box-sizing: border-box;
-  }
-
-  & a {
-    &:hover,
-    &,
-    &:active,
-    &:focus,
-    &:visited {
-      text-align: left;
-    }
-  }
-`
+export const CenterLink = ({
+  children,
+  href,
+  onClick,
+  "data-testid": testId,
+}: {
+  children: ReactNode
+  href?: string
+  onClick?: () => void
+  "data-testid"?: string
+}) => (
+  <a
+    href={href}
+    onClick={onClick}
+    data-testid={testId}
+    className="klink"
+    style={{ display: "block", textAlign: "center", fontSize: 14 }}
+  >
+    {children}
+  </a>
+)
 
 export interface DocsButtonProps {
   title: string
@@ -56,18 +53,15 @@ export const DocsButton = ({
   onClick,
   testid,
   disabled,
-  unresponsive,
 }: DocsButtonProps) => (
-  <div className={cn("col-xs-4", { "col-md-12": !unresponsive })}>
-    <div className="box">
-      <TextLeftButton
-        onClick={onClick}
-        disabled={disabled}
-        data-testid={testid}
-        href={href}
-      >
-        {title}
-      </TextLeftButton>
-    </div>
-  </div>
+  <a href={href} data-testid={testid}>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="kbtn kbtn-secondary"
+    >
+      {title}
+    </button>
+  </a>
 )

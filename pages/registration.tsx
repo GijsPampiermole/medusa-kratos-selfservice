@@ -1,63 +1,67 @@
-import { RegistrationFlow, UpdateRegistrationFlowBody } from "@ory/client"
-import { CardTitle } from "@ory/themes"
+import {
+  RegistrationFlow,
+  UiNodeInputAttributes,
+  UpdateRegistrationFlowBody,
+} from "@ory/client"
+import {
+  isUiNodeInputAttributes,
+  isUiNodeScriptAttributes,
+} from "@ory/integrations/ui"
 import { AxiosError } from "axios"
 import type { NextPage } from "next"
 import Head from "next/head"
+import Link from "next/link"
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
 
-// Import render helpers
-import { ActionCard, CenterLink, Flow, MarginCard } from "../pkg"
+import { Messages } from "../pkg"
 import { handleFlowError } from "../pkg/errors"
-// Import the SDK
 import ory from "../pkg/sdk"
+import { AuthFooter } from "../pkg/ui/AuthFooter"
+import { KChrome } from "../pkg/ui/KChrome"
+import { KIcon } from "../pkg/ui/KIcon"
+import { Node } from "../pkg/ui/Node"
+import { StrengthMeter } from "../pkg/ui/StrengthMeter"
+import { useKratosFormState } from "../pkg/ui/useKratosFormState"
 
-// Renders the registration page
+const SSO_CONFIG: Record<
+  string,
+  { label: string; letter: string; bg: string }
+> = {
+  google: { label: "Google", letter: "G", bg: "#4285F4" },
+  github: { label: "GitHub", letter: "GH", bg: "#1a1d19" },
+  apple: { label: "Apple", letter: "A", bg: "#111" },
+  microsoft: { label: "Microsoft", letter: "M", bg: "#2F7CC2" },
+}
+
 const Registration: NextPage = () => {
   const router = useRouter()
-
-  // The "flow" represents a registration process and contains
-  // information about the form we need to render (e.g. username + password)
   const [flow, setFlow] = useState<RegistrationFlow>()
-
-  // Get ?flow=... from the URL
   const { flow: flowId, return_to: returnTo } = router.query
 
-  // In this effect we either initiate a new registration flow, or we fetch an existing registration flow.
   useEffect(() => {
-    // If the router is not ready yet, or we already have a flow, do nothing.
-    if (!router.isReady || flow) {
-      return
-    }
+    if (!router.isReady || flow) return
 
-    // If ?flow=.. was in the URL, we fetch it
     if (flowId) {
       ory
         .getRegistrationFlow({ id: String(flowId) })
-        .then(({ data }) => {
-          // We received the flow - let's use its data and render the form!
-          setFlow(data)
-        })
+        .then(({ data }) => setFlow(data))
         .catch(handleFlowError(router, "registration", setFlow))
       return
     }
 
-    // Otherwise we initialize it
     ory
       .createBrowserRegistrationFlow({
         returnTo: returnTo ? String(returnTo) : undefined,
       })
-      .then(({ data }) => {
-        setFlow(data)
-      })
+      .then(({ data }) => setFlow(data))
       .catch(handleFlowError(router, "registration", setFlow))
   }, [flowId, router, router.isReady, returnTo, flow])
 
   const onSubmit = async (values: UpdateRegistrationFlowBody) => {
-    await router
-      // On submission, add the flow ID to the URL but do not navigate. This prevents the user loosing
-      // his data when she/he reloads the page.
-      .push(`/registration?flow=${flow?.id}`, undefined, { shallow: true })
+    await router.push(`/registration?flow=${flow?.id}`, undefined, {
+      shallow: true,
+    })
 
     ory
       .updateRegistrationFlow({
@@ -65,13 +69,6 @@ const Registration: NextPage = () => {
         updateRegistrationFlowBody: values,
       })
       .then(async ({ data }) => {
-        // If we ended up here, it means we are successfully signed up!
-        //
-        // You can do cool stuff here, like having access to the identity which just signed up:
-        console.log("This is the user session: ", data, data.identity)
-
-        // continue_with is a list of actions that the user might need to take before the registration is complete.
-        // It could, for example, contain a link to the verification form.
         if (data.continue_with) {
           for (const item of data.continue_with) {
             switch (item.action) {
@@ -81,38 +78,361 @@ const Registration: NextPage = () => {
             }
           }
         }
-
-        // If continue_with did not contain anything, we can just return to the home page.
-        await router.push(flow?.return_to || "/")
+        await router.push(flow?.return_to || "/settings")
       })
       .catch(handleFlowError(router, "registration", setFlow))
       .catch((err: AxiosError<RegistrationFlow>) => {
-        // If the previous handler did not catch the error it's most likely a form validation error
         if (err.response?.status === 400) {
-          // Yup, it is!
           setFlow(err.response?.data)
           return
         }
-
         return Promise.reject(err)
       })
   }
 
+  const nodes = flow?.ui?.nodes ?? []
+  const { isLoading, getNodeValue, setNodeValue, handleSubmit } =
+    useKratosFormState(nodes, onSubmit as any)
+
+  const scriptNodes = nodes.filter((n) => isUiNodeScriptAttributes(n.attributes))
+  const hiddenDefaultNodes = nodes.filter(
+    (n) =>
+      n.group === "default" &&
+      isUiNodeInputAttributes(n.attributes) &&
+      (n.attributes as UiNodeInputAttributes).type === "hidden",
+  )
+  const oidcNodes = nodes.filter((n) => n.group === "oidc")
+
+  // Trait/credential fields can live in different groups depending on the
+  // Kratos schema (e.g. "default" for identifier-first, "password" for a
+  // classic single-step form) — so match by name/type across all of them
+  // rather than assuming one group.
+  const fieldNodes = nodes.filter((n) => {
+    if (!isUiNodeInputAttributes(n.attributes)) return false
+    const attrs = n.attributes as UiNodeInputAttributes
+    if (attrs.type === "hidden" || attrs.type === "submit" || attrs.type === "button") {
+      return false
+    }
+    const group = n.group as string
+    return group !== "oidc" && group !== "passkey" && group !== "webauthn"
+  })
+  const passwordSubmitNode = nodes.find((n) => {
+    if (!isUiNodeInputAttributes(n.attributes)) return false
+    const attrs = n.attributes as UiNodeInputAttributes
+    const group = n.group as string
+    return attrs.type === "submit" && group !== "oidc" && group !== "passkey" && group !== "webauthn"
+  })
+
+  // Detect name fields for 2-col layout
+  const isNameField = (node: (typeof nodes)[0]) => {
+    if (!isUiNodeInputAttributes(node.attributes)) return false
+    const name = (node.attributes as UiNodeInputAttributes).name
+    return (
+      name.includes("name.first") ||
+      name.includes("name.last") ||
+      name.includes("first_name") ||
+      name.includes("last_name") ||
+      name === "traits.name"
+    )
+  }
+
+  const isPasswordField = (node: (typeof nodes)[0]) => {
+    if (!isUiNodeInputAttributes(node.attributes)) return false
+    return (node.attributes as UiNodeInputAttributes).type === "password"
+  }
+
+  const emailNode = fieldNodes.find((n) => {
+    if (!isUiNodeInputAttributes(n.attributes)) return false
+    const attrs = n.attributes as UiNodeInputAttributes
+    return attrs.type === "email" || attrs.name.includes("email")
+  })
+
+  const nameNodes = fieldNodes.filter(
+    (n) => isNameField(n) && n !== emailNode,
+  )
+  const passwordFieldNode = fieldNodes.find(isPasswordField)
+  const otherInputNodes = fieldNodes.filter(
+    (n) =>
+      n !== emailNode &&
+      !isNameField(n) &&
+      !isPasswordField(n),
+  )
+
+  const hasOidc = oidcNodes.length > 0
+  const pwValue = passwordFieldNode ? String(getNodeValue(passwordFieldNode) ?? "") : ""
+
+  // This project's Kratos schema is a two-screen wizard: the first screen
+  // only collects traits (email/name), then a second screen offers a
+  // choice of credential (passkey and/or password). We detect which
+  // screen we're on from which nodes the flow actually returned, rather
+  // than hard-coding a step number.
+  const passkeyNodes = nodes.filter((n) => (n.group as string) === "passkey")
+  const hasPasskey = passkeyNodes.length > 0
+  const backNode = nodes.find(
+    (n) => isUiNodeInputAttributes(n.attributes) && n.attributes.name === "screen",
+  )
+  const isCredentialStep = !!passwordFieldNode || hasPasskey
+
   return (
     <>
       <Head>
-        <title>Create account - Ory NextJS Integration Example</title>
-        <meta name="description" content="NextJS + React + Vercel + Ory" />
+        <title>Create account · Medusa</title>
+        <meta name="description" content="Create your Medusa account" />
       </Head>
-      <MarginCard>
-        <CardTitle>Create account</CardTitle>
-        <Flow onSubmit={onSubmit} flow={flow} />
-      </MarginCard>
-      <ActionCard>
-        <CenterLink data-testid="cta-link" href="/login">
-          Sign in
-        </CenterLink>
-      </ActionCard>
+
+      <KChrome />
+
+      <div className="kauth">
+        <div className="kcard kcard-enter">
+          {/* Title */}
+          <div style={{ marginBottom: 24, textAlign: "center" }}>
+            <h1
+              style={{
+                fontSize: 21,
+                fontWeight: 600,
+                letterSpacing: "-0.02em",
+                margin: 0,
+                color: "var(--fg-0)",
+              }}
+            >
+              Register an account
+            </h1>
+            <p
+              style={{
+                fontSize: 13.5,
+                color: "var(--fg-2)",
+                margin: "8px 0 0",
+                lineHeight: 1.5,
+              }}
+            >
+              Create your account to get started.
+            </p>
+          </div>
+
+          {flow && <Messages messages={flow.ui.messages} />}
+
+          {flow && (
+            <form
+              action={flow.ui.action}
+              method={flow.ui.method}
+              onSubmit={handleSubmit}
+            >
+              {/* Script nodes */}
+              {scriptNodes.map((node, k) => (
+                <Node
+                  key={`script-${k}`}
+                  node={node}
+                  disabled={isLoading}
+                  value={getNodeValue(node)}
+                  setValue={(v) => setNodeValue(node, v)}
+                  dispatchSubmit={handleSubmit}
+                />
+              ))}
+
+              {/* Hidden CSRF (+ traits carried over from the first screen) */}
+              {hiddenDefaultNodes.map((node, k) => (
+                <Node
+                  key={`default-${k}`}
+                  node={node}
+                  disabled={isLoading}
+                  value={getNodeValue(node)}
+                  setValue={(v) => setNodeValue(node, v)}
+                  dispatchSubmit={handleSubmit}
+                />
+              ))}
+
+              {/* Second screen: choose a credential (passkey and/or password) */}
+              {isCredentialStep && backNode && isUiNodeInputAttributes(backNode.attributes) && (
+                <button
+                  type="submit"
+                  formNoValidate
+                  name={backNode.attributes.name}
+                  value={String(backNode.attributes.value ?? "")}
+                  disabled={isLoading}
+                  className="klink"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    marginBottom: 18,
+                    fontSize: 13.5,
+                  }}
+                >
+                  <KIcon name="arrowLeft" size={15} />
+                  Back
+                </button>
+              )}
+
+              {/* First screen: SSO + email + name */}
+              {!isCredentialStep && (
+                <>
+                  {hasOidc && (
+                    <>
+                      <div className="ksso-grid" style={{ marginBottom: 0 }}>
+                        {oidcNodes.map((node, k) => {
+                          const attrs = node.attributes as UiNodeInputAttributes
+                          const provider = String(attrs.value ?? "")
+                          const cfg = SSO_CONFIG[provider] ?? {
+                            label: provider,
+                            letter: provider.slice(0, 2).toUpperCase(),
+                            bg: "var(--bg-4)",
+                          }
+                          return (
+                            <button
+                              key={k}
+                              type="submit"
+                              name={attrs.name}
+                              value={String(attrs.value ?? "")}
+                              disabled={attrs.disabled || isLoading}
+                              className="ksso"
+                            >
+                              <span
+                                className="ksso-badge"
+                                style={{
+                                  background: cfg.bg,
+                                  fontSize: cfg.letter.length > 1 ? 9 : 12,
+                                }}
+                              >
+                                {cfg.letter}
+                              </span>
+                              {cfg.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <div className="kdiv">
+                        <span>or sign up with email</span>
+                      </div>
+                    </>
+                  )}
+
+                  {emailNode && (
+                    <Node
+                      node={emailNode}
+                      labelOverride="Email"
+                      disabled={isLoading}
+                      value={getNodeValue(emailNode)}
+                      setValue={(v) => setNodeValue(emailNode, v)}
+                      dispatchSubmit={handleSubmit}
+                    />
+                  )}
+
+                  {/* First / Last name in 2-col if exactly 2 name fields */}
+                  {nameNodes.length === 2 ? (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 12,
+                      }}
+                    >
+                      {nameNodes.map((node, k) => (
+                        <Node
+                          key={`name-${k}`}
+                          node={node}
+                          disabled={isLoading}
+                          value={getNodeValue(node)}
+                          setValue={(v) => setNodeValue(node, v)}
+                          dispatchSubmit={handleSubmit}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    nameNodes.map((node, k) => (
+                      <Node
+                        key={`name-${k}`}
+                        node={node}
+                        disabled={isLoading}
+                        value={getNodeValue(node)}
+                        setValue={(v) => setNodeValue(node, v)}
+                        dispatchSubmit={handleSubmit}
+                      />
+                    ))
+                  )}
+
+                  {otherInputNodes.map((node, k) => (
+                    <Node
+                      key={`other-${k}`}
+                      node={node}
+                      disabled={isLoading}
+                      value={getNodeValue(node)}
+                      setValue={(v) => setNodeValue(node, v)}
+                      dispatchSubmit={handleSubmit}
+                    />
+                  ))}
+                </>
+              )}
+
+              {/* Second screen: passkey button + password field */}
+              {isCredentialStep && (
+                <>
+                  {hasPasskey &&
+                    passkeyNodes.map((node, k) => (
+                      <Node
+                        key={`passkey-${k}`}
+                        node={node}
+                        disabled={isLoading}
+                        value={getNodeValue(node)}
+                        setValue={(v) => setNodeValue(node, v)}
+                        dispatchSubmit={handleSubmit}
+                      />
+                    ))}
+
+                  {hasPasskey && passwordFieldNode && (
+                    <div className="kdiv">
+                      <span>or</span>
+                    </div>
+                  )}
+
+                  {passwordFieldNode && (
+                    <>
+                      <Node
+                        node={passwordFieldNode}
+                        disabled={isLoading}
+                        value={getNodeValue(passwordFieldNode)}
+                        setValue={(v) => setNodeValue(passwordFieldNode, v)}
+                        dispatchSubmit={handleSubmit}
+                      />
+                      <StrengthMeter value={pwValue} />
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* Submit button */}
+              {passwordSubmitNode && (
+                <div style={{ marginTop: 22 }}>
+                  <Node
+                    node={passwordSubmitNode}
+                    disabled={isLoading}
+                    value={getNodeValue(passwordSubmitNode)}
+                    setValue={(v) => setNodeValue(passwordSubmitNode, v)}
+                    dispatchSubmit={handleSubmit}
+                  />
+                </div>
+              )}
+            </form>
+          )}
+
+          <div
+            style={{
+              textAlign: "center",
+              marginTop: 22,
+              fontSize: 13.5,
+              color: "var(--fg-2)",
+            }}
+          >
+            Already have an account?{" "}
+            <Link href="/login" passHref>
+              <a data-testid="cta-link" className="klink">
+                Sign in
+              </a>
+            </Link>
+          </div>
+
+          <AuthFooter />
+        </div>
+      </div>
     </>
   )
 }

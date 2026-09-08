@@ -1,56 +1,87 @@
 import { UiNode, UiNodeTextAttributes, UiText } from "@ory/client"
-import { CodeBox, P } from "@ory/themes"
-import styled from "styled-components"
 
 interface Props {
   node: UiNode
   attributes: UiNodeTextAttributes
 }
 
-const ScrollableCodeBox = styled(CodeBox)`
-  overflow-x: auto;
-`
-
 const Content = ({ node, attributes }: Props) => {
   switch (attributes.text.id) {
-    case 1050015:
-      // This text node contains lookup secrets. Let's make them a bit more beautiful!
+    case 1050015: {
       const secrets = (attributes.text.context as any).secrets.map(
         (text: UiText, k: number) => (
           <div
             key={k}
             data-testid={`node/text/${attributes.id}/lookup_secret`}
-            className="col-xs-3"
+            style={{
+              padding: "8px 12px",
+              background: "var(--bg-3)",
+              borderRadius: 8,
+              fontFamily: "var(--font-mono)",
+              fontSize: 13,
+              color:
+                text.id === 1050014 ? "var(--fg-3)" : "var(--fg-0)",
+              textDecoration:
+                text.id === 1050014 ? "line-through" : "none",
+            }}
           >
-            {/* Used lookup_secret has ID 1050014 */}
-            <code>{text.id === 1050014 ? "Used" : text.text}</code>
+            {text.id === 1050014 ? "Used" : text.text}
           </div>
         ),
       )
       return (
         <div
-          className="container-fluid"
           data-testid={`node/text/${attributes.id}/text`}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 8,
+            margin: "8px 0",
+          }}
         >
-          <div className="row">{secrets}</div>
+          {secrets}
         </div>
       )
+    }
   }
 
   return (
     <div data-testid={`node/text/${attributes.id}/text`}>
-      <ScrollableCodeBox code={attributes.text.text} />
+      <div
+        style={{
+          background: "var(--bg-3)",
+          border: "0.5px solid var(--line-2)",
+          borderRadius: 10,
+          padding: "12px 14px",
+          fontFamily: "var(--font-mono)",
+          fontSize: 13,
+          color: "var(--fg-0)",
+          letterSpacing: "0.04em",
+          overflowX: "auto",
+          userSelect: "all",
+        }}
+      >
+        {attributes.text.text}
+      </div>
     </div>
   )
 }
 
-export const NodeText = ({ node, attributes }: Props) => {
-  return (
-    <>
-      <P data-testid={`node/text/${attributes.id}/label`}>
-        {node.meta?.label?.text}
-      </P>
-      <Content node={node} attributes={attributes} />
-    </>
-  )
-}
+export const NodeText = ({ node, attributes }: Props) => (
+  <>
+    {node.meta?.label?.text && (
+      <p
+        data-testid={`node/text/${attributes.id}/label`}
+        style={{
+          fontSize: 13,
+          color: "var(--fg-2)",
+          marginBottom: 8,
+          marginTop: 0,
+        }}
+      >
+        {node.meta.label.text}
+      </p>
+    )}
+    <Content node={node} attributes={attributes} />
+  </>
+)

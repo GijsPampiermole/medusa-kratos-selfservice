@@ -1,22 +1,24 @@
 import { getNodeLabel } from "@ory/integrations/ui"
-import { Button } from "@ory/themes"
 
 import { NodeInputProps } from "./helpers"
 
-export function NodeInputSubmit<T>({
-  node,
-  attributes,
-  disabled,
-}: NodeInputProps) {
+export function NodeInputSubmit({ node, attributes, disabled, labelOverride }: NodeInputProps) {
+  const group = node.group as string
+  const isSecondary =
+    group === "oidc" ||
+    group === "passkey" ||
+    group === "webauthn"
+
   return (
-    <>
-      <Button
-        name={attributes.name}
-        value={attributes.value || ""}
-        disabled={attributes.disabled || disabled}
-      >
-        {getNodeLabel(node)}
-      </Button>
-    </>
+    <button
+      type="submit"
+      className={`kbtn kbtn-${isSecondary ? "secondary" : "primary"} full`}
+      name={attributes.name}
+      value={attributes.value || ""}
+      disabled={attributes.disabled || disabled}
+      style={{ marginTop: 8 }}
+    >
+      {labelOverride ?? getNodeLabel(node)}
+    </button>
   )
 }

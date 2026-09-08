@@ -1,0 +1,89 @@
+/* ──────────────────────────────────────────────────────────────
+   Medusa · Design tokens
+   CSS custom properties for dark (default) and light themes.
+   ────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Backgrounds */
+  --bg-0: #08090a;
+  --bg-1: #0f1110;
+  --bg-2: #161918;
+  --bg-3: #1d2220;
+  --bg-4: #252b27;
+
+  /* Foregrounds */
+  --fg-0: #edeee9;
+  --fg-1: #c5c9c2;
+  --fg-2: #949890;
+  --fg-3: #636660;
+  --fg-4: #414440;
+
+  /* Accent — forest green */
+  --accent-hi: #2d6a4f;
+  --accent: #245840;
+  --accent-glow: rgba(45, 106, 79, 0.55);
+  --accent-soft: rgba(45, 106, 79, 0.13);
+
+  /* Critical — red */
+  --crit: #d95f5f;
+  --crit-soft: rgba(217, 95, 95, 0.1);
+
+  /* Cool — blue */
+  --cool: #5b8fcf;
+  --cool-soft: rgba(91, 143, 207, 0.1);
+
+  /* Warning — amber */
+  --warn: #c89550;
+
+  /* Borders */
+  --line-1: rgba(255, 255, 255, 0.04);
+  --line-2: rgba(255, 255, 255, 0.09);
+  --line-3: rgba(255, 255, 255, 0.17);
+
+  /* Radii */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Roboto Mono', monospace;
+}
+
+:root[data-theme="light"] {
+  --bg-0: #f4f5f1;
+  --bg-1: #ffffff;
+  --bg-2: #eef0ec;
+  --bg-3: #e4e7e0;
+  --bg-4: #dbe0d5;
+
+  --fg-0: #191c18;
+  --fg-1: #2d3229;
+  --fg-2: #4e5449;
+  --fg-3: #797e74;
+  --fg-4: #a5a9a0;
+
+  --accent-hi: #2d6a4f;
+  --accent: #245840;
+  --accent-glow: rgba(45, 106, 79, 0.35);
+  --accent-soft: rgba(45, 106, 79, 0.1);
+
+  --crit: #c03c3c;
+  --crit-soft: rgba(192, 60, 60, 0.08);
+
+  --cool: #3a72b8;
+  --cool-soft: rgba(58, 114, 184, 0.08);
+
+  --warn: #b8782a;
+
+  --line-1: rgba(0, 0, 0, 0.06);
+  --line-2: rgba(0, 0, 0, 0.11);
+  --line-3: rgba(0, 0, 0, 0.19);
+}
+
+/* Next.js root container */
+#__next {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}

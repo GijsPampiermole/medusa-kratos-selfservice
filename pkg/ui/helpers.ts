@@ -16,6 +16,10 @@ export interface NodeInputProps {
   disabled: boolean
   dispatchSubmit: FormDispatcher
   setValue: ValueSetter
+  // Overrides the node's server-provided label. Used sparingly, to make a
+  // shared Kratos node match copy from the pixel-perfect design reference
+  // without forking the underlying input/button rendering.
+  labelOverride?: string
 }
 
 export const useOnload = (attributes: { onload?: string }) => {

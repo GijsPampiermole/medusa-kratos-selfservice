@@ -1,0 +1,261 @@
+/* ──────────────────────────────────────────────────────────────
+   Medusa · Kratos self-service UI
+   Auth-specific layout. Tokens defined in kratos-tokens.css.
+   ────────────────────────────────────────────────────────────── */
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(1100px 600px at 50% -10%, rgba(58,140,104,0.10), transparent 60%),
+    radial-gradient(900px 500px at 50% 120%, rgba(58,140,104,0.06), transparent 60%),
+    var(--bg-0);
+  color: var(--fg-0);
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(1100px 600px at 50% -10%, rgba(45,106,79,0.12), transparent 60%),
+    radial-gradient(900px 500px at 50% 120%, rgba(45,106,79,0.06), transparent 60%),
+    var(--bg-0);
+}
+
+/* ── Page chrome ──────────────────────────────────────────────── */
+.kchrome {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 18px 22px;
+  pointer-events: none;
+}
+.kchrome > * { pointer-events: auto; }
+
+/* ── Auth (centered card) layout ──────────────────────────────── */
+.kauth {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  padding: 88px 20px 40px;
+}
+.kcard {
+  width: 100%; max-width: 412px;
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  border: 0.5px solid var(--line-2);
+  border-radius: var(--r-lg);
+  padding: 34px 30px 26px;
+  box-shadow: 0 28px 70px -30px rgba(0,0,0,0.7), 0 1px 0 rgba(255,255,255,0.03) inset;
+}
+:root[data-theme="light"] .kcard {
+  box-shadow: 0 26px 60px -32px rgba(26,28,24,0.3), 0 0 0 0.5px var(--line-1);
+}
+.kcard-enter { animation: kcard-in 0.5s cubic-bezier(0.22, 0.9, 0.27, 1.01) both; }
+@keyframes kcard-in { from { opacity: 0; transform: translateY(10px) scale(0.985); } to { opacity: 1; transform: none; } }
+
+/* ── Inputs ───────────────────────────────────────────────────── */
+.kfield { display: block; margin-bottom: 18px; }
+.klabel {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 13px; font-weight: 500; color: var(--fg-1);
+  margin-bottom: 8px; letter-spacing: -0.01em;
+}
+.klabel .req { color: var(--accent-hi); font-weight: 600; }
+.kinput-wrap { position: relative; display: flex; align-items: center; }
+.kinput {
+  width: 100%; height: 50px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  padding: 0 16px;
+  font-family: inherit; font-size: 15px; font-weight: 400;
+  color: var(--fg-0);
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+  letter-spacing: -0.01em;
+  box-sizing: border-box;
+}
+:root[data-theme="light"] .kinput { background: var(--bg-2); }
+.kinput::placeholder { color: var(--fg-4); }
+.kinput:hover { border-color: var(--line-3); }
+.kinput:focus {
+  border-color: var(--accent-hi);
+  box-shadow: 0 0 0 3.5px var(--accent-soft);
+  background: var(--bg-2);
+}
+:root[data-theme="light"] .kinput:focus { background: var(--bg-2); }
+.kinput.has-trail { padding-right: 48px; }
+.kinput.invalid { border-color: var(--crit); }
+.kinput.invalid:focus { box-shadow: 0 0 0 3.5px var(--crit-soft); }
+.kinput.valid { border-color: color-mix(in srgb, var(--accent-hi) 70%, transparent); }
+.ktrail {
+  position: absolute; right: 8px;
+  width: 36px; height: 36px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; cursor: pointer; color: var(--fg-3);
+  transition: color 0.15s, background 0.15s;
+}
+.ktrail:hover { color: var(--fg-1); background: var(--bg-3); }
+.kerror {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--crit); margin-top: 7px; letter-spacing: -0.01em;
+}
+.khint { font-size: 12px; color: var(--fg-3); margin-top: 7px; }
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+.kbtn {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  height: 50px; padding: 0 20px;
+  border-radius: var(--r-md);
+  font-family: inherit; font-size: 15px; font-weight: 600;
+  cursor: pointer; border: 1px solid transparent;
+  letter-spacing: -0.01em; white-space: nowrap;
+  transition: transform 0.12s, box-shadow 0.2s, background 0.18s, border-color 0.18s, opacity 0.18s;
+  -webkit-tap-highlight-color: transparent;
+}
+.kbtn.full { width: 100%; }
+.kbtn:active { transform: scale(0.985); }
+.kbtn:disabled { cursor: default; opacity: 0.55; }
+.kbtn-primary {
+  background: linear-gradient(180deg, var(--accent-hi), var(--accent));
+  color: #fff;
+}
+.kbtn-secondary {
+  background: var(--bg-3);
+  color: var(--fg-0);
+  border-color: var(--line-2);
+}
+.kbtn-secondary:not(:disabled):hover { background: var(--bg-4); border-color: var(--line-3); }
+.kbtn-ghost { background: transparent; color: var(--fg-1); }
+.kbtn-ghost:not(:disabled):hover { background: var(--bg-3); }
+.kbtn-danger { background: transparent; color: var(--crit); border-color: color-mix(in srgb, var(--crit) 32%, transparent); }
+.kbtn-danger:not(:disabled):hover { background: var(--crit-soft); }
+.kbtn-sm { height: 40px; font-size: 13.5px; padding: 0 15px; border-radius: 11px; }
+
+/* ── Link ─────────────────────────────────────────────────────── */
+.klink {
+  color: var(--accent-hi); font-weight: 500; cursor: pointer;
+  background: none; border: 0; padding: 0; font-family: inherit; font-size: inherit;
+  text-decoration: none; letter-spacing: -0.01em;
+}
+.klink:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+/* ── Divider ──────────────────────────────────────────────────── */
+.kdiv { display: flex; align-items: center; gap: 14px; margin: 22px 0; }
+.kdiv::before, .kdiv::after { content: ''; flex: 1; height: 1px; background: var(--line-2); }
+.kdiv span { font-size: 11.5px; color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.12em; }
+
+/* ── SSO ──────────────────────────────────────────────────────── */
+.ksso-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ksso {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  height: 46px; border-radius: var(--r-md);
+  background: var(--bg-3); border: 1px solid var(--line-2);
+  color: var(--fg-1); font-size: 13.5px; font-weight: 500; cursor: pointer;
+  font-family: inherit; transition: background 0.15s, border-color 0.15s;
+}
+.ksso:hover { background: var(--bg-4); border-color: var(--line-3); }
+.ksso-badge {
+  width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff;
+}
+
+/* ── Spinner ──────────────────────────────────────────────────── */
+.kspin { animation: kspin 0.75s linear infinite; }
+@keyframes kspin { to { transform: rotate(360deg); } }
+
+/* ── Alert banner ─────────────────────────────────────────────── */
+.kalert {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px; border-radius: var(--r-md);
+  font-size: 13px; line-height: 1.45; margin-bottom: 18px;
+  border: 1px solid transparent;
+  animation: kcard-in 0.32s ease both;
+}
+.kalert-error { background: var(--crit-soft); border-color: color-mix(in srgb, var(--crit) 28%, transparent); color: color-mix(in srgb, var(--crit) 88%, var(--fg-0)); }
+.kalert-success { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent-hi) 32%, transparent); color: var(--accent-hi); }
+.kalert-info { background: var(--cool-soft); border-color: color-mix(in srgb, var(--cool) 30%, transparent); color: color-mix(in srgb, var(--cool) 86%, var(--fg-0)); }
+
+/* ── Strength meter ───────────────────────────────────────────── */
+.kstrength { display: flex; gap: 5px; margin-top: 10px; }
+.kstrength i { flex: 1; height: 4px; border-radius: 999px; background: var(--line-2); transition: background 0.25s; }
+
+/* ── OTP boxes ────────────────────────────────────────────────── */
+.kotp { display: flex; gap: 9px; justify-content: center; }
+.kotp input {
+  width: 46px; height: 56px; text-align: center;
+  font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums;
+  background: var(--bg-1); border: 1px solid var(--line-2); border-radius: 12px;
+  color: var(--fg-0); outline: none; font-family: var(--font-mono);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+:root[data-theme="light"] .kotp input { background: var(--bg-2); }
+.kotp input:focus { border-color: var(--accent-hi); box-shadow: 0 0 0 3.5px var(--accent-soft); }
+.kotp input.filled { border-color: color-mix(in srgb, var(--accent-hi) 60%, transparent); }
+
+/* ── Settings layout ──────────────────────────────────────────── */
+.kset { flex: 1; display: flex; max-width: 1180px; width: 100%; margin: 0 auto; padding-top: 28px; }
+.kset-nav {
+  width: 248px; flex-shrink: 0; padding: 24px 16px 24px 22px;
+  position: sticky; top: 28px; align-self: flex-start;
+}
+.kset-main { flex: 1; min-width: 0; padding: 24px 28px 80px; max-width: 760px; }
+.knav-item {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 10px 13px; border-radius: 11px;
+  background: transparent; border: 0; cursor: pointer; font-family: inherit;
+  font-size: 14px; font-weight: 500; color: var(--fg-2); text-align: left;
+  transition: background 0.14s, color 0.14s;
+}
+.knav-item:hover { background: var(--bg-2); color: var(--fg-0); }
+.knav-item.active { background: var(--accent-soft); color: var(--accent-hi); }
+.knav-item.active .knav-ico { color: var(--accent-hi); }
+.knav-ico { color: var(--fg-3); display: flex; }
+.kset-sect { animation: kcard-in 0.4s ease both; }
+.kset-card {
+  background: var(--bg-2); border: 0.5px solid var(--line-1);
+  border-radius: var(--r-lg); padding: 24px;
+}
+:root[data-theme="light"] .kset-card { box-shadow: 0 1px 2px rgba(26,28,24,0.04); }
+.kset-mobnav { display: none; }
+
+@media (max-width: 760px) {
+  .kset { flex-direction: column; padding-top: 56px; }
+  .kset-nav { display: none; }
+  .kset-main { padding: 12px 16px 90px; max-width: none; }
+  .kset-mobnav {
+    display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none;
+    padding: 10px 16px; position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg-0) 86%, transparent);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--line-1);
+  }
+  .kset-mobnav::-webkit-scrollbar { display: none; }
+  .kmob-item {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 7px;
+    height: 34px; padding: 0 13px; border-radius: 999px;
+    background: var(--bg-2); border: 0.5px solid var(--line-2);
+    color: var(--fg-2); font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+  }
+  .kmob-item.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .kcard { padding: 28px 22px 22px; }
+}
+
+/* ── QR placeholder ───────────────────────────────────────────── */
+.kqr { display: grid; gap: 0; background: #fff; padding: 12px; border-radius: 12px; width: 176px; height: 176px; }
+.kqr i { background: #0a0a0a; }
+.kqr i.off { background: #fff; }
+
+/* ── Misc ─────────────────────────────────────────────────────── */
+.kmuted { color: var(--fg-3); }
+.krow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.kchip-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 28px; border: 1px dashed var(--line-2); border-radius: var(--r-md);
+  color: var(--fg-3); font-size: 13px; text-align: center;
+}
+.kdivline { height: 0.5px; background: var(--line-1); margin: 28px 0; }
+.fade-in { animation: kcard-in 0.4s ease both; }
+@media (prefers-reduced-motion: reduce) {
+  .kcard-enter, .kset-sect, .kalert, .fade-in { animation: none; }
+}
