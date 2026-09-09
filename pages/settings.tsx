@@ -379,11 +379,7 @@ const Settings: NextPage = () => {
             </p>
           </div>
 
-          {/* Per-field/section save feedback lives on the Save buttons themselves
-              (spinner → checkmark); only surface non-success flow messages here. */}
-          {flow && (
-            <Messages messages={flow.ui.messages?.filter((m) => m.type !== "success")} />
-          )}
+          {flow && <Messages messages={flow.ui.messages} />}
 
           {SECTIONS.map(({ id, title, description }) => (
             <div

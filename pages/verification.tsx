@@ -9,7 +9,7 @@ import type { NextPage } from "next"
 import Head from "next/head"
 import Link from "next/link"
 import { useRouter } from "next/router"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import ory from "../pkg/sdk"
 import { AuthFooter } from "../pkg/ui/AuthFooter"
@@ -93,7 +93,9 @@ const Verification: NextPage = () => {
       })
   }
 
-  const nodes = flow?.ui?.nodes ?? []
+  // Stable per flow, mirroring the generic <Flow> component's
+  // `prevProps.flow !== this.props.flow` re-initialisation contract.
+  const nodes = useMemo(() => flow?.ui?.nodes ?? [], [flow])
   const { isLoading, getNodeValue, setNodeValue, handleSubmit } =
     useKratosFormState(nodes, onSubmit as any)
 
@@ -118,6 +120,14 @@ const Verification: NextPage = () => {
   // If code node exists, show OTP boxes; otherwise show email input
   const isCodeStage = !!codeNode
   const email = flow?.ui?.messages?.find((m) => m.id === 1080001)?.text ?? ""
+
+  // Every node the flow returned still has to render and submit, exactly as
+  // the generic <Flow> renderer did — the fields above are only placed by
+  // hand for layout. Anything not placed above lands here.
+  const handledNodes = new Set(
+    [...defaultNodes, codeNode, emailNode, submitNode].filter(Boolean),
+  )
+  const fallbackNodes = nodes.filter((n) => !handledNodes.has(n))
 
   return (
     <>
@@ -239,6 +249,18 @@ const Verification: NextPage = () => {
                   dispatchSubmit={handleSubmit}
                 />
               )}
+
+              {/* Anything the flow returned that isn't placed above */}
+              {fallbackNodes.map((node, k) => (
+                <Node
+                  key={`fallback-${k}`}
+                  node={node}
+                  disabled={isLoading}
+                  value={getNodeValue(node)}
+                  setValue={(v) => setNodeValue(node, v)}
+                  dispatchSubmit={handleSubmit}
+                />
+              ))}
             </form>
           )}
 

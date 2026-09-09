@@ -12,16 +12,14 @@ import type { NextPage } from "next"
 import Head from "next/head"
 import Link from "next/link"
 import { useRouter } from "next/router"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { LogoutLink, Messages } from "../pkg"
 import { handleFlowError, handleGetFlowError } from "../pkg/errors"
 import ory from "../pkg/sdk"
 import { AuthFooter } from "../pkg/ui/AuthFooter"
 import { KChrome } from "../pkg/ui/KChrome"
-import { KIcon } from "../pkg/ui/KIcon"
 import { Node } from "../pkg/ui/Node"
-import { OtpInput } from "../pkg/ui/OtpInput"
 import { useKratosFormState } from "../pkg/ui/useKratosFormState"
 
 const SSO_CONFIG: Record<
@@ -36,7 +34,6 @@ const SSO_CONFIG: Record<
 
 const Login: NextPage = () => {
   const [flow, setFlow] = useState<LoginFlow>()
-  const [otpValue, setOtpValue] = useState("")
   const router = useRouter()
   const { return_to: returnTo, flow: flowId, refresh, aal } = router.query
 
@@ -77,7 +74,16 @@ const Login: NextPage = () => {
               window.location.href = flow.return_to
               return
             }
-            router.push("/settings")
+            // Go through "/" rather than pushing "/settings" directly: "/"
+            // checks the session (toSession) and only then decides where to
+            // send the user, the same way the original app always did after
+            // login. Pushing "/settings" directly skips that check and
+            // fetches a settings flow straight away, which — if this
+            // account needs a second factor — hits Kratos's own
+            // redirect_browser_to handling in errors.tsx (unchanged,
+            // original behavior) instead of the simple local aal2 redirect
+            // "/" already does.
+            router.push("/")
           })
           .catch(handleFlowError(router, "login", setFlow))
           .catch((err: AxiosError<LoginFlow>) => {
@@ -89,7 +95,9 @@ const Login: NextPage = () => {
           }),
       )
 
-  const nodes = flow?.ui?.nodes ?? []
+  // Stable per flow, mirroring the generic <Flow> component's
+  // `prevProps.flow !== this.props.flow` re-initialisation contract.
+  const nodes = useMemo(() => flow?.ui?.nodes ?? [], [flow])
   const { isLoading, getNodeValue, setNodeValue, handleSubmit } =
     useKratosFormState(nodes, onSubmit as any)
 
@@ -126,44 +134,23 @@ const Login: NextPage = () => {
   const hasOidc = oidcNodes.length > 0
   const hasPassword = !!passwordFieldNode
 
-  // Second-factor (AAL2) step: Kratos returns a completely different node
-  // set here (no identifier/password), so this is detected from the nodes
-  // themselves rather than solely from the ?aal= query param.
-  const totpCodeNode = nodes.find(
-    (n) => isUiNodeInputAttributes(n.attributes) && n.attributes.name === "totp_code",
+  // Any node not explicitly handled above (e.g. a second-factor code field
+  // on an AAL2 login) still needs to render — this page used to rely on the
+  // generic <Flow> component to render whatever the flow contained; now
+  // that specific fields are pulled out by hand for layout, this fallback
+  // keeps that same "render everything else" behavior for anything else.
+  const handledNodes = new Set(
+    [
+      ...scriptNodes,
+      ...hiddenDefaultNodes,
+      ...passkeyNodes,
+      identifierNode,
+      passwordFieldNode,
+      passwordSubmitNode,
+      ...oidcNodes,
+    ].filter(Boolean),
   )
-  const totpSubmitNode = nodes.find(
-    (n) => n.group === "totp" && isUiNodeInputAttributes(n.attributes) && n.attributes.type === "submit",
-  )
-  const lookupCodeNode = nodes.find(
-    (n) => isUiNodeInputAttributes(n.attributes) && n.attributes.name === "lookup_secret",
-  )
-  const lookupSubmitNode = nodes.find(
-    (n) => n.group === "lookup_secret" && isUiNodeInputAttributes(n.attributes) && n.attributes.type === "submit",
-  )
-  // The webauthn.js helper script is shared with the "passkey" method and
-  // is present on plenty of perfectly normal AAL1 password logins — its
-  // mere presence (group "webauthn") is not evidence of a webauthn 2FA
-  // step. Only an actual webauthn login field is.
-  const webauthnLoginNodes = nodes.filter((n) => n.group === "webauthn")
-  const hasWebauthnLogin = nodes.some(
-    (n) =>
-      isUiNodeInputAttributes(n.attributes) &&
-      (n.attributes.name === "webauthn_login" || n.attributes.name === "webauthn_login_trigger"),
-  )
-  const secondFactorKind: "totp" | "lookup_secret" | "webauthn" | null = totpCodeNode
-    ? "totp"
-    : lookupCodeNode
-    ? "lookup_secret"
-    : hasWebauthnLogin
-    ? "webauthn"
-    : null
-  // Belt-and-suspenders: a genuine second-factor step never also carries an
-  // identifier/password field, so require their absence too before hijacking
-  // the normal login form.
-  const isSecondFactorStep =
-    !flow?.refresh && !identifierNode && !passwordFieldNode && !!secondFactorKind
-  const secondFactorSubmitNode = totpSubmitNode ?? lookupSubmitNode
+  const fallbackNodes = nodes.filter((n) => !handledNodes.has(n))
 
   const title = flow?.refresh
     ? "Confirm Action"
@@ -173,164 +160,9 @@ const Login: NextPage = () => {
 
   const subtitle = flow?.refresh
     ? "Re-enter your credentials to continue."
-    : secondFactorKind === "totp"
-    ? "Enter the 6-digit code from your authenticator app."
-    : secondFactorKind === "lookup_secret"
-    ? "Enter one of your backup recovery codes."
-    : secondFactorKind === "webauthn"
-    ? "Use your security key to continue."
     : flow?.requested_aal === "aal2"
     ? "Enter your second factor to continue."
     : "Welcome back. Continue to your account."
-
-  if (isSecondFactorStep) {
-    return (
-      <>
-        <Head>
-          <title>Two-factor authentication · Medusa</title>
-          <meta name="description" content="Confirm your second factor to sign in" />
-        </Head>
-
-        <KChrome />
-
-        <div className="kauth">
-          <div className="kcard kcard-enter">
-            <div style={{ textAlign: "center", marginBottom: 4 }}>
-              <div
-                style={{
-                  width: 52,
-                  height: 52,
-                  margin: "0 auto 16px",
-                  borderRadius: 15,
-                  background: "var(--bg-3)",
-                  border: "0.5px solid var(--line-2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <KIcon
-                  name={
-                    secondFactorKind === "totp" ? "smartphone" : secondFactorKind === "webauthn" ? "key" : "shield"
-                  }
-                  size={24}
-                  color="var(--accent-hi)"
-                />
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 20, textAlign: "center" }}>
-              <h1
-                style={{
-                  fontSize: 21,
-                  fontWeight: 600,
-                  letterSpacing: "-0.02em",
-                  margin: 0,
-                  color: "var(--fg-0)",
-                }}
-              >
-                {title}
-              </h1>
-              <p
-                style={{
-                  fontSize: 13.5,
-                  color: "var(--fg-2)",
-                  margin: "8px 0 0",
-                  lineHeight: 1.5,
-                }}
-              >
-                {subtitle}
-              </p>
-            </div>
-
-            {flow && <Messages messages={flow.ui.messages} />}
-
-            {flow && (
-              <form action={flow.ui.action} method={flow.ui.method} onSubmit={handleSubmit}>
-                {scriptNodes.map((node, k) => (
-                  <Node
-                    key={`script-${k}`}
-                    node={node}
-                    disabled={isLoading}
-                    value={getNodeValue(node)}
-                    setValue={(v) => setNodeValue(node, v)}
-                    dispatchSubmit={handleSubmit}
-                  />
-                ))}
-                {hiddenDefaultNodes.map((node, k) => (
-                  <Node
-                    key={`default-${k}`}
-                    node={node}
-                    disabled={isLoading}
-                    value={getNodeValue(node)}
-                    setValue={(v) => setNodeValue(node, v)}
-                    dispatchSubmit={handleSubmit}
-                  />
-                ))}
-
-                {secondFactorKind === "totp" && totpCodeNode && (
-                  <>
-                    {/* Hidden real code input, kept in sync with the OTP boxes below */}
-                    <input type="hidden" name="totp_code" value={otpValue} onChange={() => {}} />
-                    <div style={{ margin: "8px 0 22px" }}>
-                      <OtpInput
-                        value={otpValue}
-                        onChange={(v) => {
-                          setOtpValue(v)
-                          setNodeValue(totpCodeNode, v)
-                        }}
-                      />
-                    </div>
-                  </>
-                )}
-
-                {secondFactorKind === "lookup_secret" && lookupCodeNode && (
-                  <Node
-                    node={lookupCodeNode}
-                    labelOverride="Backup recovery code"
-                    disabled={isLoading}
-                    value={getNodeValue(lookupCodeNode)}
-                    setValue={(v) => setNodeValue(lookupCodeNode, v)}
-                    dispatchSubmit={handleSubmit}
-                  />
-                )}
-
-                {secondFactorKind === "webauthn" &&
-                  webauthnLoginNodes.map((node, k) => (
-                    <Node
-                      key={`webauthn-${k}`}
-                      node={node}
-                      disabled={isLoading}
-                      value={getNodeValue(node)}
-                      setValue={(v) => setNodeValue(node, v)}
-                      dispatchSubmit={handleSubmit}
-                    />
-                  ))}
-
-                {secondFactorSubmitNode && (
-                  <Node
-                    node={secondFactorSubmitNode}
-                    disabled={isLoading || (secondFactorKind === "totp" && otpValue.length < 6)}
-                    value={getNodeValue(secondFactorSubmitNode)}
-                    setValue={(v) => setNodeValue(secondFactorSubmitNode, v)}
-                    dispatchSubmit={handleSubmit}
-                  />
-                )}
-              </form>
-            )}
-
-            <div style={{ marginTop: 20, textAlign: "center" }}>
-              <button className="klink" onClick={onLogout} data-testid="logout-link">
-                Log out
-              </button>
-            </div>
-
-            <AuthFooter />
-          </div>
-        </div>
-      </>
-    )
-  }
 
   return (
     <>
@@ -461,6 +293,19 @@ const Login: NextPage = () => {
                   dispatchSubmit={handleSubmit}
                 />
               )}
+
+              {/* Anything else the flow returned (e.g. a second-factor
+                  code field on an AAL2 login) that isn't rendered above */}
+              {fallbackNodes.map((node, k) => (
+                <Node
+                  key={`fallback-${k}`}
+                  node={node}
+                  disabled={isLoading}
+                  value={getNodeValue(node)}
+                  setValue={(v) => setNodeValue(node, v)}
+                  dispatchSubmit={handleSubmit}
+                />
+              ))}
 
               {/* SSO grid */}
               {hasOidc && (

@@ -11,14 +11,6 @@ export function useKratosFormState(
   const [values, setValues] = useState<Values>({})
   const [isLoading, setIsLoading] = useState(false)
 
-  // Callers commonly derive `nodes` as `flow?.ui?.nodes ?? []`, which is a
-  // fresh array on every render for as long as `flow` is undefined (e.g.
-  // while loading, or while a flow keeps failing to resolve). Depending on
-  // that array by reference would re-run this effect every render forever;
-  // depending on a content-derived key instead makes it stable whenever the
-  // actual node set hasn't changed, regardless of the caller's array identity.
-  const nodesKey = nodes.map((node) => getNodeId(node)).join("|")
-
   useEffect(() => {
     const vals: Values = {}
     nodes.forEach((node) => {
@@ -30,8 +22,7 @@ export function useKratosFormState(
       }
     })
     setValues(vals)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodesKey])
+  }, [nodes])
 
   const setValue = (name: string, value: any) =>
     new Promise<void>((resolve) => {

@@ -12,7 +12,7 @@ import type { NextPage } from "next"
 import Head from "next/head"
 import Link from "next/link"
 import { useRouter } from "next/router"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { Messages } from "../pkg"
 import { handleFlowError } from "../pkg/errors"
@@ -78,7 +78,7 @@ const Registration: NextPage = () => {
             }
           }
         }
-        await router.push(flow?.return_to || "/settings")
+        await router.push(flow?.return_to || "/")
       })
       .catch(handleFlowError(router, "registration", setFlow))
       .catch((err: AxiosError<RegistrationFlow>) => {
@@ -90,7 +90,9 @@ const Registration: NextPage = () => {
       })
   }
 
-  const nodes = flow?.ui?.nodes ?? []
+  // Stable per flow, mirroring the generic <Flow> component's
+  // `prevProps.flow !== this.props.flow` re-initialisation contract.
+  const nodes = useMemo(() => flow?.ui?.nodes ?? [], [flow])
   const { isLoading, getNodeValue, setNodeValue, handleSubmit } =
     useKratosFormState(nodes, onSubmit as any)
 
@@ -161,17 +163,23 @@ const Registration: NextPage = () => {
   const hasOidc = oidcNodes.length > 0
   const pwValue = passwordFieldNode ? String(getNodeValue(passwordFieldNode) ?? "") : ""
 
-  // This project's Kratos schema is a two-screen wizard: the first screen
-  // only collects traits (email/name), then a second screen offers a
-  // choice of credential (passkey and/or password). We detect which
-  // screen we're on from which nodes the flow actually returned, rather
-  // than hard-coding a step number.
   const passkeyNodes = nodes.filter((n) => (n.group as string) === "passkey")
   const hasPasskey = passkeyNodes.length > 0
-  const backNode = nodes.find(
-    (n) => isUiNodeInputAttributes(n.attributes) && n.attributes.name === "screen",
+
+  // Every node the flow returned still has to render and submit, exactly as
+  // the generic <Flow> renderer did — the sections above only choose where
+  // the known fields are placed. Anything not placed by hand lands here.
+  const handledNodes = new Set(
+    [
+      ...scriptNodes,
+      ...hiddenDefaultNodes,
+      ...oidcNodes,
+      ...passkeyNodes,
+      ...fieldNodes,
+      passwordSubmitNode,
+    ].filter(Boolean),
   )
-  const isCredentialStep = !!passwordFieldNode || hasPasskey
+  const fallbackNodes = nodes.filter((n) => !handledNodes.has(n))
 
   return (
     <>
@@ -241,118 +249,89 @@ const Registration: NextPage = () => {
                 />
               ))}
 
-              {/* Second screen: choose a credential (passkey and/or password) */}
-              {isCredentialStep && backNode && isUiNodeInputAttributes(backNode.attributes) && (
-                <button
-                  type="submit"
-                  formNoValidate
-                  name={backNode.attributes.name}
-                  value={String(backNode.attributes.value ?? "")}
-                  disabled={isLoading}
-                  className="klink"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    marginBottom: 18,
-                    fontSize: 13.5,
-                  }}
-                >
-                  <KIcon name="arrowLeft" size={15} />
-                  Back
-                </button>
+              {/* SSO grid */}
+              {hasOidc && (
+                <>
+                  <div className="ksso-grid" style={{ marginBottom: 0 }}>
+                    {oidcNodes.map((node, k) => {
+                      const attrs = node.attributes as UiNodeInputAttributes
+                      const provider = String(attrs.value ?? "")
+                      const cfg = SSO_CONFIG[provider] ?? {
+                        label: provider,
+                        letter: provider.slice(0, 2).toUpperCase(),
+                        bg: "var(--bg-4)",
+                      }
+                      return (
+                        <button
+                          key={k}
+                          type="submit"
+                          name={attrs.name}
+                          value={String(attrs.value ?? "")}
+                          disabled={attrs.disabled || isLoading}
+                          className="ksso"
+                        >
+                          <span
+                            className="ksso-badge"
+                            style={{
+                              background: cfg.bg,
+                              fontSize: cfg.letter.length > 1 ? 9 : 12,
+                            }}
+                          >
+                            {cfg.letter}
+                          </span>
+                          {cfg.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="kdiv">
+                    <span>or sign up with email</span>
+                  </div>
+                </>
               )}
 
-              {/* First screen: SSO + email + name */}
-              {!isCredentialStep && (
-                <>
-                  {hasOidc && (
-                    <>
-                      <div className="ksso-grid" style={{ marginBottom: 0 }}>
-                        {oidcNodes.map((node, k) => {
-                          const attrs = node.attributes as UiNodeInputAttributes
-                          const provider = String(attrs.value ?? "")
-                          const cfg = SSO_CONFIG[provider] ?? {
-                            label: provider,
-                            letter: provider.slice(0, 2).toUpperCase(),
-                            bg: "var(--bg-4)",
-                          }
-                          return (
-                            <button
-                              key={k}
-                              type="submit"
-                              name={attrs.name}
-                              value={String(attrs.value ?? "")}
-                              disabled={attrs.disabled || isLoading}
-                              className="ksso"
-                            >
-                              <span
-                                className="ksso-badge"
-                                style={{
-                                  background: cfg.bg,
-                                  fontSize: cfg.letter.length > 1 ? 9 : 12,
-                                }}
-                              >
-                                {cfg.letter}
-                              </span>
-                              {cfg.label}
-                            </button>
-                          )
-                        })}
-                      </div>
-                      <div className="kdiv">
-                        <span>or sign up with email</span>
-                      </div>
-                    </>
-                  )}
+              {/* Passkey */}
+              {hasPasskey &&
+                passkeyNodes.map((node, k) => (
+                  <Node
+                    key={`passkey-${k}`}
+                    node={node}
+                    disabled={isLoading}
+                    value={getNodeValue(node)}
+                    setValue={(v) => setNodeValue(node, v)}
+                    dispatchSubmit={handleSubmit}
+                  />
+                ))}
 
-                  {emailNode && (
+              {hasPasskey && passwordFieldNode && (
+                <div className="kdiv">
+                  <span>or</span>
+                </div>
+              )}
+
+              {emailNode && (
+                <Node
+                  node={emailNode}
+                  labelOverride="Email"
+                  disabled={isLoading}
+                  value={getNodeValue(emailNode)}
+                  setValue={(v) => setNodeValue(emailNode, v)}
+                  dispatchSubmit={handleSubmit}
+                />
+              )}
+
+              {/* First / Last name in 2-col if exactly 2 name fields */}
+              {nameNodes.length === 2 ? (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 12,
+                  }}
+                >
+                  {nameNodes.map((node, k) => (
                     <Node
-                      node={emailNode}
-                      labelOverride="Email"
-                      disabled={isLoading}
-                      value={getNodeValue(emailNode)}
-                      setValue={(v) => setNodeValue(emailNode, v)}
-                      dispatchSubmit={handleSubmit}
-                    />
-                  )}
-
-                  {/* First / Last name in 2-col if exactly 2 name fields */}
-                  {nameNodes.length === 2 ? (
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: 12,
-                      }}
-                    >
-                      {nameNodes.map((node, k) => (
-                        <Node
-                          key={`name-${k}`}
-                          node={node}
-                          disabled={isLoading}
-                          value={getNodeValue(node)}
-                          setValue={(v) => setNodeValue(node, v)}
-                          dispatchSubmit={handleSubmit}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    nameNodes.map((node, k) => (
-                      <Node
-                        key={`name-${k}`}
-                        node={node}
-                        disabled={isLoading}
-                        value={getNodeValue(node)}
-                        setValue={(v) => setNodeValue(node, v)}
-                        dispatchSubmit={handleSubmit}
-                      />
-                    ))
-                  )}
-
-                  {otherInputNodes.map((node, k) => (
-                    <Node
-                      key={`other-${k}`}
+                      key={`name-${k}`}
                       node={node}
                       disabled={isLoading}
                       value={getNodeValue(node)}
@@ -360,42 +339,41 @@ const Registration: NextPage = () => {
                       dispatchSubmit={handleSubmit}
                     />
                   ))}
-                </>
+                </div>
+              ) : (
+                nameNodes.map((node, k) => (
+                  <Node
+                    key={`name-${k}`}
+                    node={node}
+                    disabled={isLoading}
+                    value={getNodeValue(node)}
+                    setValue={(v) => setNodeValue(node, v)}
+                    dispatchSubmit={handleSubmit}
+                  />
+                ))
               )}
 
-              {/* Second screen: passkey button + password field */}
-              {isCredentialStep && (
+              {otherInputNodes.map((node, k) => (
+                <Node
+                  key={`other-${k}`}
+                  node={node}
+                  disabled={isLoading}
+                  value={getNodeValue(node)}
+                  setValue={(v) => setNodeValue(node, v)}
+                  dispatchSubmit={handleSubmit}
+                />
+              ))}
+
+              {passwordFieldNode && (
                 <>
-                  {hasPasskey &&
-                    passkeyNodes.map((node, k) => (
-                      <Node
-                        key={`passkey-${k}`}
-                        node={node}
-                        disabled={isLoading}
-                        value={getNodeValue(node)}
-                        setValue={(v) => setNodeValue(node, v)}
-                        dispatchSubmit={handleSubmit}
-                      />
-                    ))}
-
-                  {hasPasskey && passwordFieldNode && (
-                    <div className="kdiv">
-                      <span>or</span>
-                    </div>
-                  )}
-
-                  {passwordFieldNode && (
-                    <>
-                      <Node
-                        node={passwordFieldNode}
-                        disabled={isLoading}
-                        value={getNodeValue(passwordFieldNode)}
-                        setValue={(v) => setNodeValue(passwordFieldNode, v)}
-                        dispatchSubmit={handleSubmit}
-                      />
-                      <StrengthMeter value={pwValue} />
-                    </>
-                  )}
+                  <Node
+                    node={passwordFieldNode}
+                    disabled={isLoading}
+                    value={getNodeValue(passwordFieldNode)}
+                    setValue={(v) => setNodeValue(passwordFieldNode, v)}
+                    dispatchSubmit={handleSubmit}
+                  />
+                  <StrengthMeter value={pwValue} />
                 </>
               )}
 
@@ -411,6 +389,18 @@ const Registration: NextPage = () => {
                   />
                 </div>
               )}
+
+              {/* Anything the flow returned that isn't placed above */}
+              {fallbackNodes.map((node, k) => (
+                <Node
+                  key={`fallback-${k}`}
+                  node={node}
+                  disabled={isLoading}
+                  value={getNodeValue(node)}
+                  setValue={(v) => setNodeValue(node, v)}
+                  dispatchSubmit={handleSubmit}
+                />
+              ))}
             </form>
           )}
 

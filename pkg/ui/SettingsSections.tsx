@@ -542,30 +542,6 @@ export function BackupCodesReveal({
   )
 }
 
-// Kratos only advertises "lookup_secret_regenerate" as an actionable node
-// once you've interacted with the method this session (revealed or just
-// regenerated) — on a fresh page load with an already-active credential it
-// only offers "reveal" and "disable". The regenerate action is still a
-// documented, always-accepted field on the settings update body though, so
-// this falls back to a synthetic node with the right name/value when the
-// server hasn't handed us a real one, keeping the button always available
-// (matching the design) without ever inventing data Kratos didn't send.
-function regenerateFallbackNode(): UiNode {
-  return {
-    type: "input",
-    group: "lookup_secret",
-    attributes: {
-      node_type: "input",
-      name: "lookup_secret_regenerate",
-      type: "submit",
-      value: "true",
-      disabled: false,
-    },
-    messages: [],
-    meta: {},
-  } as unknown as UiNode
-}
-
 export function BackupCodesSection({ flow, onSubmit }: { flow?: SettingsFlow; onSubmit: OnSubmit }) {
   const nodes = useMemo(() => nodesForGroup(flow, "lookup_secret"), [flow])
   const { isLoading, getNodeValue, setNodeValue, handleSubmit } = useKratosFormState(
@@ -576,12 +552,19 @@ export function BackupCodesSection({ flow, onSubmit }: { flow?: SettingsFlow; on
   if (!flow || nodes.length === 0) return null
 
   const defaultNodes = nodes.filter((n) => n.group === "default")
-  const regenerateNode = findInput(nodes, "lookup_secret_regenerate") ?? regenerateFallbackNode()
+  const regenerateNode = findInput(nodes, "lookup_secret_regenerate")
   const revealNode = findInput(nodes, "lookup_secret_reveal")
   const disableNode = findInput(nodes, "lookup_secret_disable")
   const isActive = !!disableNode
   const revealAttrs = revealNode?.attributes as UiNodeInputAttributes | undefined
-  const regenerateAttrs = regenerateNode.attributes as UiNodeInputAttributes
+  const regenerateAttrs = regenerateNode?.attributes as UiNodeInputAttributes | undefined
+
+  // Anything in this group that isn't placed by hand below still has to
+  // render and submit, exactly as the generic <Flow> renderer did.
+  const handledNodes = new Set(
+    [...defaultNodes, regenerateNode, revealNode, disableNode].filter(Boolean),
+  )
+  const fallbackNodes = nodes.filter((n) => !handledNodes.has(n))
 
   return (
     <form action={flow.ui.action} method={flow.ui.method} onSubmit={handleSubmit}>
@@ -636,21 +619,35 @@ export function BackupCodesSection({ flow, onSubmit }: { flow?: SettingsFlow; on
             No backup codes generated yet.
           </div>
         )}
-        <button
-          type="submit"
-          name={regenerateAttrs.name}
-          value={String(regenerateAttrs.value ?? "")}
-          disabled={regenerateAttrs.disabled || isLoading}
-          className="kbtn kbtn-primary full"
-        >
-          {isLoading ? <Spinner size={17} color="#fff" /> : <KIcon name="refresh" size={17} color="#fff" />}
-          Generate new backup recovery codes
-        </button>
-        {isActive && (
+        {regenerateAttrs && (
+          <button
+            type="submit"
+            name={regenerateAttrs.name}
+            value={String(regenerateAttrs.value ?? "")}
+            disabled={regenerateAttrs.disabled || isLoading}
+            className="kbtn kbtn-primary full"
+          >
+            {isLoading ? <Spinner size={17} color="#fff" /> : <KIcon name="refresh" size={17} color="#fff" />}
+            Generate new backup recovery codes
+          </button>
+        )}
+        {isActive && regenerateAttrs && (
           <p style={{ fontSize: 12, color: "var(--fg-3)", margin: "12px 0 0" }}>
             Generating new codes invalidates any existing set.
           </p>
         )}
+
+        {/* Anything in this group not placed above */}
+        {fallbackNodes.map((node, k) => (
+          <Node
+            key={`fallback-${k}`}
+            node={node}
+            disabled={isLoading}
+            value={getNodeValue(node)}
+            setValue={(v) => setNodeValue(node, v)}
+            dispatchSubmit={handleSubmit}
+          />
+        ))}
       </div>
     </form>
   )
