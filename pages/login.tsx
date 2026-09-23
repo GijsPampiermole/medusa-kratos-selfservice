@@ -18,24 +18,22 @@ import { LogoutLink, Messages } from "../pkg"
 import { handleFlowError, handleGetFlowError } from "../pkg/errors"
 import ory from "../pkg/sdk"
 import { AuthFooter } from "../pkg/ui/AuthFooter"
+import { CardSkeleton } from "../pkg/ui/CardSkeleton"
 import { KChrome } from "../pkg/ui/KChrome"
 import { Node } from "../pkg/ui/Node"
+import { SsoGrid } from "../pkg/ui/SsoGrid"
 import { useKratosFormState } from "../pkg/ui/useKratosFormState"
-
-const SSO_CONFIG: Record<
-  string,
-  { label: string; letter: string; bg: string }
-> = {
-  google: { label: "Google", letter: "G", bg: "#4285F4" },
-  github: { label: "GitHub", letter: "GH", bg: "#1a1d19" },
-  apple: { label: "Apple", letter: "A", bg: "#111" },
-  microsoft: { label: "Microsoft", letter: "M", bg: "#2F7CC2" },
-}
 
 const Login: NextPage = () => {
   const [flow, setFlow] = useState<LoginFlow>()
   const router = useRouter()
-  const { return_to: returnTo, flow: flowId, refresh, aal } = router.query
+  const {
+    return_to: returnTo,
+    flow: flowId,
+    refresh,
+    aal,
+    login_challenge: loginChallenge,
+  } = router.query
 
   const onLogout = LogoutLink([aal, refresh])
 
@@ -55,10 +53,25 @@ const Login: NextPage = () => {
         refresh: Boolean(refresh),
         aal: aal ? String(aal) : undefined,
         returnTo: returnTo ? String(returnTo) : undefined,
+        // Hydra appends this when it redirects here as part of an OAuth2
+        // flow (e.g. the mobile app's login). Without forwarding it, Kratos
+        // has no way to tie this login back to that OAuth2 request, so
+        // `flow.return_to` on success ends up empty and the user lands on
+        // "/" instead of back at Hydra's consent step / the app's redirect_uri.
+        loginChallenge: loginChallenge ? String(loginChallenge) : undefined,
       })
       .then(({ data }) => setFlow(data))
       .catch(handleFlowError(router, "login", setFlow))
-  }, [flowId, router, router.isReady, aal, refresh, returnTo, flow])
+  }, [
+    flowId,
+    router,
+    router.isReady,
+    aal,
+    refresh,
+    returnTo,
+    loginChallenge,
+    flow,
+  ])
 
   const onSubmit = (values: UpdateLoginFlowBody) =>
     router
@@ -203,8 +216,11 @@ const Login: NextPage = () => {
           {/* Global messages */}
           {flow && <Messages messages={flow.ui.messages} />}
 
+          {!flow && <CardSkeleton rows={["sso","sso","button","divider","field","field","link","button"]} />}
+
           {flow && (
             <form
+              className="kstagger"
               action={flow.ui.action}
               method={flow.ui.method}
               onSubmit={handleSubmit}
@@ -233,6 +249,9 @@ const Login: NextPage = () => {
                 />
               ))}
 
+              {/* Social sign-in first, mirroring the registration page */}
+              <SsoGrid nodes={oidcNodes} disabled={isLoading} />
+
               {/* Passkey button */}
               {hasPasskey &&
                 passkeyNodes.map((node, k) => (
@@ -246,10 +265,10 @@ const Login: NextPage = () => {
                   />
                 ))}
 
-              {/* Divider between passkey and password */}
-              {hasPasskey && hasPassword && (
+              {/* Divider before the email/password form, which comes last */}
+              {(hasOidc || hasPasskey) && hasPassword && (
                 <div className="kdiv">
-                  <span>or</span>
+                  <span>or sign in with email</span>
                 </div>
               )}
 
@@ -307,47 +326,6 @@ const Login: NextPage = () => {
                 />
               ))}
 
-              {/* SSO grid */}
-              {hasOidc && (
-                <>
-                  <div className="kdiv">
-                    <span>or continue with</span>
-                  </div>
-                  <div className="ksso-grid">
-                    {oidcNodes.map((node, k) => {
-                      const attrs = node.attributes as UiNodeInputAttributes
-                      const provider = String(attrs.value ?? "")
-                      const cfg = SSO_CONFIG[provider] ?? {
-                        label: provider,
-                        letter: provider.slice(0, 2).toUpperCase(),
-                        bg: "var(--bg-4)",
-                      }
-                      return (
-                        <button
-                          key={k}
-                          type="submit"
-                          name={attrs.name}
-                          value={String(attrs.value ?? "")}
-                          disabled={attrs.disabled || isLoading}
-                          className="ksso"
-                        >
-                          <span
-                            className="ksso-badge"
-                            style={{
-                              background: cfg.bg,
-                              fontSize:
-                                cfg.letter.length > 1 ? 9 : 12,
-                            }}
-                          >
-                            {cfg.letter}
-                          </span>
-                          {cfg.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </>
-              )}
             </form>
           )}
 

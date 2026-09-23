@@ -18,26 +18,21 @@ import { Messages } from "../pkg"
 import { handleFlowError } from "../pkg/errors"
 import ory from "../pkg/sdk"
 import { AuthFooter } from "../pkg/ui/AuthFooter"
+import { CardSkeleton } from "../pkg/ui/CardSkeleton"
 import { KChrome } from "../pkg/ui/KChrome"
-import { KIcon } from "../pkg/ui/KIcon"
 import { Node } from "../pkg/ui/Node"
+import { SsoGrid } from "../pkg/ui/SsoGrid"
 import { StrengthMeter } from "../pkg/ui/StrengthMeter"
 import { useKratosFormState } from "../pkg/ui/useKratosFormState"
-
-const SSO_CONFIG: Record<
-  string,
-  { label: string; letter: string; bg: string }
-> = {
-  google: { label: "Google", letter: "G", bg: "#4285F4" },
-  github: { label: "GitHub", letter: "GH", bg: "#1a1d19" },
-  apple: { label: "Apple", letter: "A", bg: "#111" },
-  microsoft: { label: "Microsoft", letter: "M", bg: "#2F7CC2" },
-}
 
 const Registration: NextPage = () => {
   const router = useRouter()
   const [flow, setFlow] = useState<RegistrationFlow>()
-  const { flow: flowId, return_to: returnTo } = router.query
+  const {
+    flow: flowId,
+    return_to: returnTo,
+    login_challenge: loginChallenge,
+  } = router.query
 
   useEffect(() => {
     if (!router.isReady || flow) return
@@ -53,10 +48,13 @@ const Registration: NextPage = () => {
     ory
       .createBrowserRegistrationFlow({
         returnTo: returnTo ? String(returnTo) : undefined,
+        // See pages/login.tsx — same reasoning: Hydra appends this when
+        // registration is reached as part of an OAuth2 flow.
+        loginChallenge: loginChallenge ? String(loginChallenge) : undefined,
       })
       .then(({ data }) => setFlow(data))
       .catch(handleFlowError(router, "registration", setFlow))
-  }, [flowId, router, router.isReady, returnTo, flow])
+  }, [flowId, router, router.isReady, returnTo, loginChallenge, flow])
 
   const onSubmit = async (values: UpdateRegistrationFlowBody) => {
     await router.push(`/registration?flow=${flow?.id}`, undefined, {
@@ -219,8 +217,11 @@ const Registration: NextPage = () => {
 
           {flow && <Messages messages={flow.ui.messages} />}
 
+          {!flow && <CardSkeleton rows={["field","field","field","button"]} />}
+
           {flow && (
             <form
+              className="kstagger"
               action={flow.ui.action}
               method={flow.ui.method}
               onSubmit={handleSubmit}
@@ -252,38 +253,7 @@ const Registration: NextPage = () => {
               {/* SSO grid */}
               {hasOidc && (
                 <>
-                  <div className="ksso-grid" style={{ marginBottom: 0 }}>
-                    {oidcNodes.map((node, k) => {
-                      const attrs = node.attributes as UiNodeInputAttributes
-                      const provider = String(attrs.value ?? "")
-                      const cfg = SSO_CONFIG[provider] ?? {
-                        label: provider,
-                        letter: provider.slice(0, 2).toUpperCase(),
-                        bg: "var(--bg-4)",
-                      }
-                      return (
-                        <button
-                          key={k}
-                          type="submit"
-                          name={attrs.name}
-                          value={String(attrs.value ?? "")}
-                          disabled={attrs.disabled || isLoading}
-                          className="ksso"
-                        >
-                          <span
-                            className="ksso-badge"
-                            style={{
-                              background: cfg.bg,
-                              fontSize: cfg.letter.length > 1 ? 9 : 12,
-                            }}
-                          >
-                            {cfg.letter}
-                          </span>
-                          {cfg.label}
-                        </button>
-                      )
-                    })}
-                  </div>
+                  <SsoGrid nodes={oidcNodes} disabled={isLoading} />
                   <div className="kdiv">
                     <span>or sign up with email</span>
                   </div>
