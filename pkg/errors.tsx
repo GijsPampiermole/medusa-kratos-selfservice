@@ -8,6 +8,21 @@ type FlowErrorResponse = {
   redirect_browser_to: string
 }
 
+/**
+ * Kratos answers "you need a second factor" with a redirect to whatever URL is
+ * configured as the project's Login UI. When this app runs somewhere else than
+ * that configured URL — e.g. locally on :4456 while the project points at the
+ * hosted UI — following that redirect lands the browser on an origin that
+ * can't see this app's session cookie, and Kratos rejects it with
+ * `session_aal1_required`. Building the aal2 flow through this app's own
+ * origin instead keeps the cookie attached.
+ *
+ * Set this to `false` (or delete the guard below) once the project's Login UI
+ * URL matches wherever this app is deployed — then Kratos's own redirect is
+ * always correct and this is unnecessary.
+ */
+const PREFER_SAME_ORIGIN_AAL2 = true
+
 // A small function to help us deal with errors coming from fetching a flow.
 export function handleGetFlowError<S>(
   router: NextRouter,
@@ -19,9 +34,13 @@ export function handleGetFlowError<S>(
       case "session_inactive":
         await router.push("/login?return_to=" + window.location.href)
         return
-      case "session_aal2_required":
-        if (err.response?.data.redirect_browser_to) {
-          const redirectTo = new URL(err.response?.data.redirect_browser_to)
+      case "session_aal2_required": {
+        const target = err.response?.data.redirect_browser_to
+        const offOrigin =
+          !!target && new URL(target, window.location.origin).origin !== window.location.origin
+
+        if (target && !(PREFER_SAME_ORIGIN_AAL2 && offOrigin)) {
+          const redirectTo = new URL(target)
           if (flowType === "settings") {
             redirectTo.searchParams.set("return_to", window.location.href)
           }
@@ -29,8 +48,12 @@ export function handleGetFlowError<S>(
           window.location.href = redirectTo.toString()
           return
         }
-        await router.push("/login?aal=aal2&return_to=" + window.location.href)
+        // Same-origin aal2 flow. No return_to: Kratos rejects any address that
+        // isn't on its allow-list, and that rejection loops back through this
+        // handler. /login's own post-login default lands the user correctly.
+        await router.push("/login?aal=aal2")
         return
+      }
       case "session_already_available":
         // User is already signed in, let's redirect them home!
         await router.push("/")

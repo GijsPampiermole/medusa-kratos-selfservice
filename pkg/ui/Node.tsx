@@ -21,6 +21,7 @@ interface Props {
   setValue: ValueSetter
   dispatchSubmit: FormDispatcher
   labelOverride?: string
+  placeholder?: string
 }
 
 export const Node = ({
@@ -30,6 +31,7 @@ export const Node = ({
   disabled,
   dispatchSubmit,
   labelOverride,
+  placeholder,
 }: Props) => {
   if (isUiNodeImageAttributes(node.attributes)) {
     return <NodeImage node={node} attributes={node.attributes} />
@@ -57,6 +59,7 @@ export const Node = ({
         disabled={disabled}
         attributes={node.attributes}
         labelOverride={labelOverride}
+        placeholder={placeholder}
       />
     )
   }

@@ -29,6 +29,7 @@ const P: Record<string, React.ReactNode> = {
   sun: <g><circle cx="12" cy="12" r="4.2" /><path d="M12 2.5 V5 M12 19 V21.5 M21.5 12 H19 M5 12 H2.5 M18.4 5.6 L16.6 7.4 M7.4 16.6 L5.6 18.4 M18.4 18.4 L16.6 16.6 M7.4 7.4 L5.6 5.6" /></g>,
   moon: <path d="M20 14 A8.5 8.5 0 0 1 9.5 4 A7 7 0 1 0 20 14 Z" />,
   leaf: <g><path d="M5 19 C 5 11 11 5 19 5 C 19 13 13 19 5 19 Z" /><path d="M5 19 C 9 15 12 12 16 10" /></g>,
+  menu: <g><path d="M4 6 H20 M4 12 H20 M4 18 H20" /></g>,
 }
 
 interface Props {

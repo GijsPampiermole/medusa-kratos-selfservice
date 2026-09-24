@@ -2,9 +2,28 @@ import { useState } from "react"
 
 import { NodeInputProps, callWebauthnFunction } from "./helpers"
 
+/**
+ * Kratos doesn't send placeholders, but the design specifies one per field.
+ * Keyed by the node's name so it applies wherever that field turns up.
+ */
+const PLACEHOLDERS: Record<string, string> = {
+  identifier: "you@example.com",
+  "traits.email": "you@example.com",
+  email: "you@example.com",
+  "traits.name.first": "Jane",
+  "traits.first_name": "Jane",
+  "traits.name.last": "Doe",
+  "traits.last_name": "Doe",
+  totp_code: "123456",
+  lookup_secret: "xxxx-xxxx",
+  webauthn_register_displayname: "e.g. Personal YubiKey",
+  passkey_settings_register_displayname: "e.g. Personal laptop",
+}
+
 export function NodeInputDefault(props: NodeInputProps) {
   const { node, attributes, value = "", setValue, disabled, labelOverride } = props
   const [showPw, setShowPw] = useState(false)
+  const placeholder = props.placeholder ?? PLACEHOLDERS[attributes.name]
 
   const onClick = () => {
     if (attributes.onclick) {
@@ -35,6 +54,7 @@ export function NodeInputDefault(props: NodeInputProps) {
             .join(" ")}
           type={isPassword && showPw ? "text" : attributes.type}
           name={attributes.name}
+          placeholder={placeholder}
           value={value}
           disabled={attributes.disabled || disabled}
           autoComplete={attributes.autocomplete}

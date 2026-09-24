@@ -33,7 +33,7 @@ function findInput(nodes: UiNode[], name: string) {
   )
 }
 
-function SectionHead({ title, sub }: { title: string; sub: string }) {
+export function SectionHead({ title, sub }: { title: string; sub: string }) {
   return (
     <div style={{ marginBottom: 20 }}>
       <h2
@@ -1021,5 +1021,140 @@ export function AuthenticatorSection({ flow, onSubmit }: { flow?: SettingsFlow; 
         </div>
       </div>
     </form>
+  )
+}
+
+/* ── About ────────────────────────────────────────────────────── */
+// Lives as a settings tab rather than a separate route so it opens inline
+// like every other section, instead of navigating away to a standalone page.
+// Placeholder content — tell Claude what should actually be here (app
+// version, support contact, legal links, etc.) and it'll fill this in.
+
+/* ── About ────────────────────────────────────────────────────── */
+
+function AboutLabel({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        fontSize: 12,
+        fontWeight: 600,
+        color: "var(--fg-3)",
+        textTransform: "uppercase",
+        letterSpacing: "0.06em",
+        marginBottom: 8,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function AboutLinks({ links }: { links: { label: string; href: string }[] }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginTop: 8 }}>
+      {links.map(({ label, href }) => (
+        <a
+          key={href}
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="klink"
+          style={{ fontSize: 13.5 }}
+        >
+          {label}
+        </a>
+      ))}
+    </div>
+  )
+}
+
+export function AboutSection() {
+  return (
+    <div className="kset-card">
+      <SectionHead
+        title="About"
+        sub="App details, version and support."
+      />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+
+        {/* App */}
+        <div>
+          <AboutLabel>Medusa</AboutLabel>
+          <div style={{ fontSize: 13.5, color: "var(--fg-2)", lineHeight: 1.6 }}>
+            Your account and authentication portal for Medusa.
+          </div>
+        </div>
+
+        {/* Version */}
+        <div
+          className="krow"
+          style={{
+            padding: "13px 15px",
+            borderRadius: 12,
+            background: "var(--bg-1)",
+            border: "0.5px solid var(--line-2)",
+          }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 500, color: "var(--fg-0)" }}>
+            Version
+          </span>
+          <span style={{ fontSize: 13.5, color: "var(--fg-3)" }}>1.0.0</span>
+        </div>
+
+        {/* Support */}
+        <div>
+          <AboutLabel>Support</AboutLabel>
+          <div style={{ fontSize: 13.5, color: "var(--fg-2)", lineHeight: 1.6 }}>
+            Need help with your account? Contact our support team.
+          </div>
+          <a
+            href="mailto:support@nirah.nl"
+            className="klink"
+            style={{ display: "inline-block", marginTop: 8, fontSize: 13.5 }}
+          >
+            support@nirah.nl
+          </a>
+        </div>
+
+        {/* Legal */}
+        <div>
+          <AboutLabel>Legal &amp; Privacy</AboutLabel>
+          <AboutLinks
+            links={[
+              { label: "Privacy Policy", href: "https://medusa.nirah.nl/privacy" },
+              { label: "Terms of Service", href: "https://medusa.nirah.nl/terms" },
+              { label: "Security", href: "https://medusa.nirah.nl/security" },
+            ]}
+          />
+        </div>
+
+        {/* Authentication infrastructure */}
+        <div style={{ paddingTop: 8, borderTop: "0.5px solid var(--line-1)" }}>
+          <AboutLabel>Authentication</AboutLabel>
+          <p style={{ fontSize: 13, color: "var(--fg-2)", lineHeight: 1.6, margin: 0 }}>
+            Medusa's authentication infrastructure is built using the
+            open-source Ory Kratos and Ory Hydra projects. These services
+            are self-hosted and operated by Nirah.
+          </p>
+          <AboutLinks
+            links={[
+              { label: "Ory Kratos", href: "https://www.ory.sh/kratos/" },
+              { label: "Ory Hydra", href: "https://www.ory.sh/hydra/" },
+              { label: "Open-source licenses", href: "https://www.apache.org/licenses/LICENSE-2.0" },
+            ]}
+          />
+        </div>
+
+        {/* Company */}
+        <div style={{ paddingTop: 8, borderTop: "0.5px solid var(--line-1)" }}>
+          <AboutLabel>Medusa</AboutLabel>
+          <p style={{ fontSize: 13, color: "var(--fg-2)", lineHeight: 1.6, margin: 0 }}>
+            © {new Date().getFullYear()} Nirah. All rights reserved.
+          </p>
+        </div>
+
+      </div>
+    </div>
   )
 }

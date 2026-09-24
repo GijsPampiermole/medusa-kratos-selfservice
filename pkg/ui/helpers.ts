@@ -20,6 +20,8 @@ export interface NodeInputProps {
   // shared Kratos node match copy from the pixel-perfect design reference
   // without forking the underlying input/button rendering.
   labelOverride?: string
+  // Kratos never sends placeholders; the design specifies them per field.
+  placeholder?: string
 }
 
 export const useOnload = (attributes: { onload?: string }) => {

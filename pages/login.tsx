@@ -252,6 +252,13 @@ const Login: NextPage = () => {
               {/* Social sign-in first, mirroring the registration page */}
               <SsoGrid nodes={oidcNodes} disabled={isLoading} />
 
+              {/* Divider between the OAuth providers and the passkey button */}
+              {hasOidc && hasPasskey && (
+                <div className="kdiv">
+                  <span>or</span>
+                </div>
+              )}
+
               {/* Passkey button */}
               {hasPasskey &&
                 passkeyNodes.map((node, k) => (

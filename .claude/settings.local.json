@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Depth 0)",
+      "Bash(Select-Object Name, Mode)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Data\\\\Projects\\\\Medusa\\\\medusa-kratos-selfservice\\\\claude-design\\\\\" -Recurse -File | Select-Object FullName)",
+      "PowerShell(ls -Path \"C:\\\\Data\\\\Projects\\\\Medusa\\\\medusa-kratos-selfservice\\\\claude-design\\\\\" -Recurse | Where-Object {$_.PSIsContainer -eq $false} | Select-Object -ExpandProperty FullName)",
+      "Bash(npx tsc *)",
+      "Bash(npx next *)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/next/package.json'\\).version\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/typescript/package.json'\\).version\\)\")",
+      "Bash(npm install *)",
+      "Bash(Test-Path \"C:\\\\Data\\\\Projects\\\\Medusa\\\\medusa-kratos-selfservice\\\\.env.local\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Data\\\\Projects\\\\Medusa\\\\medusa-kratos-selfservice\\\\claude-design\\\\\" -File)",
+      "Bash(node -e \"const { UiNodeGroupEnum } = require\\('@ory/client'\\); console.log\\(UiNodeGroupEnum\\)\")",
+      "Bash(node -e \"const { UiNodeInputAttributes } = require\\('@ory/client'\\); console.log\\('keys:', Object.keys\\(UiNodeInputAttributes || {}\\)\\)\")"
+    ]
+  }
+}

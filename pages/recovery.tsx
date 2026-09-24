@@ -10,6 +10,7 @@ import { Flow } from "../pkg"
 import { handleFlowError } from "../pkg/errors"
 import ory from "../pkg/sdk"
 import { AuthFooter } from "../pkg/ui/AuthFooter"
+import { CardSkeleton } from "../pkg/ui/CardSkeleton"
 import { KChrome } from "../pkg/ui/KChrome"
 import { KIcon } from "../pkg/ui/KIcon"
 
@@ -118,6 +119,8 @@ const Recovery: NextPage = () => {
               Enter your account email and we&apos;ll send a recovery code.
             </p>
           </div>
+
+          {!flow && <CardSkeleton rows={["field", "button"]} />}
 
           <Flow onSubmit={onSubmit} flow={flow} />
 

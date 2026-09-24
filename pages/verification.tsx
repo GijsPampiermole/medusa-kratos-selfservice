@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from "react"
 
 import ory from "../pkg/sdk"
 import { AuthFooter } from "../pkg/ui/AuthFooter"
+import { CardSkeleton } from "../pkg/ui/CardSkeleton"
 import { KChrome } from "../pkg/ui/KChrome"
 import { KIcon } from "../pkg/ui/KIcon"
 import { Messages } from "../pkg/ui/Messages"
@@ -188,8 +189,11 @@ const Verification: NextPage = () => {
 
           {flow && <Messages messages={flow.ui.messages} />}
 
+          {!flow && <CardSkeleton rows={["otp","button"]} />}
+
           {flow && (
             <form
+              className="kstagger"
               action={flow.ui.action}
               method={flow.ui.method}
               onSubmit={handleSubmit}

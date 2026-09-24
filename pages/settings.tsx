@@ -2,7 +2,6 @@ import { SettingsFlow, UpdateSettingsFlowBody } from "@ory/client"
 import { AxiosError } from "axios"
 import type { NextPage } from "next"
 import Head from "next/head"
-import Link from "next/link"
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
 
@@ -12,6 +11,7 @@ import ory from "../pkg/sdk"
 import { KChrome } from "../pkg/ui/KChrome"
 import { KIcon } from "../pkg/ui/KIcon"
 import {
+  AboutSection,
   AuthenticatorSection,
   BackupCodesReveal,
   BackupCodesSection,
@@ -59,6 +59,14 @@ const IFingerprint = () => (
     <path d="M12 5.5 c-3.6 0-6.5 2.9-6.5 6.5 v2" /><path d="M12 8.5 c-2 0-3.5 1.6-3.5 3.5 v3.5" /><path d="M12 11.5 v4.5" /><path d="M18.5 12 c0-3.6-2.9-6.5-6.5-6.5" /><path d="M15.5 12.5 v2.5 c0 1.2-.2 2-.5 3" />
   </svg>
 )
+
+// Deep-links back into the mobile app when settings was opened from there.
+// Must match whatever custom-scheme intent filter the Flutter app
+// registers — verify/adjust against its AndroidManifest.xml / Info.plist.
+// The app should treat being opened via this bare scheme as "bring me to
+// the foreground", not attempt to parse it as an OAuth callback (no
+// `code`/`state` will be present, unlike nl.nirah.medusa://oauth2redirect).
+const MOBILE_APP_RETURN_URL = "nl.nirah.medusa://"
 
 /* ── Section config ─────────────────────────────────────────────── */
 
@@ -167,11 +175,77 @@ function SettingsSection({ flow, only, title, description, onSubmit }: SectionPr
   )
 }
 
+/* ── Shared nav content (desktop sidebar + mobile drawer) ─────────── */
+
+// "about" isn't a Kratos settings method — it's a static tab — so the active
+// section can be either a real method or that one extra id.
+type SectionId = Methods | "about"
+
+interface SettingsNavProps {
+  availableSections: typeof SECTIONS
+  activeSection: SectionId
+  onSelectSection: (id: SectionId) => void
+  onLogout: () => void
+}
+
+function SettingsNav({
+  availableSections,
+  activeSection,
+  onSelectSection,
+  onLogout,
+}: SettingsNavProps) {
+  return (
+    <>
+      <nav style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {availableSections.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            className={`knav-item${activeSection === id ? " active" : ""}`}
+            onClick={() => onSelectSection(id)}
+          >
+            <span className="knav-ico">
+              <Icon />
+            </span>
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="knav-sep" />
+
+      <button
+        className={`knav-item${activeSection === "about" ? " active" : ""}`}
+        onClick={() => onSelectSection("about")}
+      >
+        <span className="knav-ico">
+          <KIcon name="info" size={18} />
+        </span>
+        About
+      </button>
+
+      <div className="knav-sep" />
+
+      <button
+        className="knav-item"
+        onClick={onLogout}
+        data-testid="logout-link"
+        style={{ color: "var(--crit)" }}
+      >
+        <span className="knav-ico" style={{ color: "var(--crit)" }}>
+          <KIcon name="logout" size={18} />
+        </span>
+        Logout
+      </button>
+    </>
+  )
+}
+
 /* ── Page ───────────────────────────────────────────────────────── */
 
 const Settings: NextPage = () => {
   const [flow, setFlow] = useState<SettingsFlow>()
-  const [activeSection, setActiveSection] = useState<Methods>("profile")
+  const [activeSection, setActiveSection] = useState<SectionId>("profile")
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const router = useRouter()
   const onLogout = LogoutLink()
@@ -273,6 +347,68 @@ const Settings: NextPage = () => {
 
       <KChrome />
 
+      {/* Mobile menu button — opposite corner from KChrome's theme toggle */}
+      <button
+        className="kset-menu-btn"
+        onClick={() => setMenuOpen(true)}
+        aria-label="Open menu"
+      >
+        <KIcon name="menu" size={18} />
+      </button>
+
+      {menuOpen && (
+        <>
+          <div className="kmenu-backdrop" onClick={() => setMenuOpen(false)} />
+          <div className="kmenu-drawer">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "0 13px 14px",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: "-0.02em" }}>
+                  Account
+                </div>
+                <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 2 }}>
+                  Manage your account
+                </div>
+              </div>
+              <button
+                className="kset-menu-close"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Close menu"
+              >
+                <KIcon name="x" size={17} />
+              </button>
+            </div>
+
+            <button
+              className="kbtn kbtn-secondary full"
+              style={{ marginBottom: 6 }}
+              onClick={() => {
+                window.location.href = MOBILE_APP_RETURN_URL
+              }}
+            >
+              <KIcon name="arrowRight" size={16} style={{ marginRight: 8 }} />
+              Return to app
+            </button>
+
+            <SettingsNav
+              availableSections={availableSections}
+              activeSection={activeSection}
+              onSelectSection={(id) => {
+                setActiveSection(id)
+                setMenuOpen(false)
+              }}
+              onLogout={onLogout}
+            />
+          </div>
+        </>
+      )}
+
       <div className="kset">
         {/* Desktop sidebar */}
         <aside className="kset-nav">
@@ -285,73 +421,13 @@ const Settings: NextPage = () => {
             </div>
           </div>
 
-          <Link href="/" passHref>
-            <a className="knav-item" style={{ marginBottom: 6, textDecoration: "none" }}>
-              <span className="knav-ico">
-                <KIcon name="arrowLeft" size={18} />
-              </span>
-              Back
-            </a>
-          </Link>
-
-          <nav style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {availableSections.map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                className={`knav-item${activeSection === id ? " active" : ""}`}
-                onClick={() => setActiveSection(id)}
-              >
-                <span className="knav-ico">
-                  <Icon />
-                </span>
-                {label}
-              </button>
-            ))}
-          </nav>
-
-          <div
-            style={{
-              height: "0.5px",
-              background: "var(--line-1)",
-              margin: "14px 13px",
-            }}
+          <SettingsNav
+            availableSections={availableSections}
+            activeSection={activeSection}
+            onSelectSection={setActiveSection}
+            onLogout={onLogout}
           />
-
-          <button
-            className="knav-item"
-            onClick={onLogout}
-            data-testid="logout-link"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              color: "var(--crit)",
-              padding: "10px 13px",
-              borderRadius: 11,
-              fontSize: 14,
-              fontWeight: 500,
-            }}
-          >
-            <span className="knav-ico" style={{ color: "var(--crit)" }}>
-              <KIcon name="logout" size={18} />
-            </span>
-            Logout
-          </button>
         </aside>
-
-        {/* Mobile pill nav */}
-        <div className="kset-mobnav">
-          {availableSections.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              className={`kmob-item${activeSection === id ? " active" : ""}`}
-              onClick={() => setActiveSection(id)}
-            >
-              <Icon />
-              {label}
-            </button>
-          ))}
-        </div>
 
         {/* Main content */}
         <main className="kset-main">
@@ -406,6 +482,13 @@ const Settings: NextPage = () => {
               )}
             </div>
           ))}
+
+          <div
+            className="kset-sect"
+            style={{ display: activeSection === "about" ? "block" : "none" }}
+          >
+            <AboutSection />
+          </div>
         </main>
       </div>
     </>

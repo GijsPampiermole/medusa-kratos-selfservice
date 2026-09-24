@@ -1,0 +1,45 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "$description": "Medusa colour tokens. Every colour carries both a dark and light value; the build step emits them as themed CSS custom properties, a TS object and a Flutter ColorScheme.",
+  "color": {
+    "bg": {
+      "0": { "$type": "color", "$value": { "dark": "#08090a", "light": "#f4f5f1" }, "$description": "Page background" },
+      "1": { "$type": "color", "$value": { "dark": "#0f1110", "light": "#ffffff" }, "$description": "Input / inset surface" },
+      "2": { "$type": "color", "$value": { "dark": "#161918", "light": "#eef0ec" }, "$description": "Card surface" },
+      "3": { "$type": "color", "$value": { "dark": "#1d2220", "light": "#e4e7e0" }, "$description": "Raised surface, secondary button" },
+      "4": { "$type": "color", "$value": { "dark": "#252b27", "light": "#dbe0d5" }, "$description": "Hover surface" }
+    },
+    "fg": {
+      "0": { "$type": "color", "$value": { "dark": "#edeee9", "light": "#191c18" }, "$description": "Primary text" },
+      "1": { "$type": "color", "$value": { "dark": "#c5c9c2", "light": "#2d3229" }, "$description": "Body text" },
+      "2": { "$type": "color", "$value": { "dark": "#949890", "light": "#4e5449" }, "$description": "Secondary text" },
+      "3": { "$type": "color", "$value": { "dark": "#636660", "light": "#797e74" }, "$description": "Muted text, icons" },
+      "4": { "$type": "color", "$value": { "dark": "#414440", "light": "#a5a9a0" }, "$description": "Placeholder" }
+    },
+    "accent": {
+      "hi": { "$type": "color", "$value": { "dark": "#2d6a4f", "light": "#2d6a4f" }, "$description": "Accent — forest green" },
+      "base": { "$type": "color", "$value": { "dark": "#245840", "light": "#245840" }, "$description": "Accent, deeper (gradient end)" },
+      "glow": { "$type": "color", "$value": { "dark": "rgba(45,106,79,0.55)", "light": "rgba(45,106,79,0.35)" }, "$description": "Accent glow for shadows" },
+      "soft": { "$type": "color", "$value": { "dark": "rgba(45,106,79,0.13)", "light": "rgba(45,106,79,0.10)" }, "$description": "Accent tint background" }
+    },
+    "crit": {
+      "base": { "$type": "color", "$value": { "dark": "#d95f5f", "light": "#c03c3c" }, "$description": "Error / destructive" },
+      "soft": { "$type": "color", "$value": { "dark": "rgba(217,95,95,0.10)", "light": "rgba(192,60,60,0.08)" } }
+    },
+    "cool": {
+      "base": { "$type": "color", "$value": { "dark": "#5b8fcf", "light": "#3a72b8" }, "$description": "Informational" },
+      "soft": { "$type": "color", "$value": { "dark": "rgba(91,143,207,0.10)", "light": "rgba(58,114,184,0.08)" } }
+    },
+    "warn": {
+      "base": { "$type": "color", "$value": { "dark": "#c89550", "light": "#b8782a" }, "$description": "Warning" }
+    },
+    "line": {
+      "1": { "$type": "color", "$value": { "dark": "rgba(255,255,255,0.04)", "light": "rgba(0,0,0,0.06)" }, "$description": "Hairline" },
+      "2": { "$type": "color", "$value": { "dark": "rgba(255,255,255,0.09)", "light": "rgba(0,0,0,0.11)" }, "$description": "Default border" },
+      "3": { "$type": "color", "$value": { "dark": "rgba(255,255,255,0.17)", "light": "rgba(0,0,0,0.19)" }, "$description": "Hover border" }
+    },
+    "onAccent": {
+      "base": { "$type": "color", "$value": { "dark": "#ffffff", "light": "#ffffff" }, "$description": "Text on accent fill" }
+    }
+  }
+}

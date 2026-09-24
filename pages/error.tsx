@@ -1,15 +1,14 @@
 import { FlowError } from "@ory/client"
-import { CardTitle, CodeBox } from "@ory/themes"
 import { AxiosError } from "axios"
 import type { NextPage } from "next"
-import Link from "next/link"
+import Head from "next/head"
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
 
-import { ActionCard, CenterLink, MarginCard } from "../pkg"
 import ory from "../pkg/sdk"
+import { ErrorCard } from "../pkg/ui/ErrorCard"
 
-const Login: NextPage = () => {
+const Error: NextPage = () => {
   const [error, setError] = useState<FlowError | string>()
 
   // Get ?id=... from the URL
@@ -46,19 +45,24 @@ const Login: NextPage = () => {
     return null
   }
 
+  // Kratos nests the human-readable text under error.reason/message; fall back
+  // to the raw payload when it's shaped differently.
+  const payload = typeof error === "string" ? undefined : (error as any)?.error
+  const message: string =
+    payload?.reason || payload?.message || "The identity server reported an error."
+
   return (
     <>
-      <MarginCard wide>
-        <CardTitle>An error occurred</CardTitle>
-        <CodeBox code={JSON.stringify(error, null, 2)} />
-      </MarginCard>
-      <ActionCard wide>
-        <Link href="/" passHref>
-          <CenterLink>Go back</CenterLink>
-        </Link>
-      </ActionCard>
+      <Head>
+        <title>An error occurred · Medusa</title>
+      </Head>
+      <ErrorCard
+        title="An error occurred"
+        description={message}
+        detail={JSON.stringify(error, null, 2)}
+      />
     </>
   )
 }
 
-export default Login
+export default Error

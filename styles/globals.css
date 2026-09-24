@@ -1,3 +1,4 @@
 @import "./flexboxgrid.css";
+@import "../design-system/dist/css/tokens.css";
 @import "./kratos-tokens.css";
 @import "./kratos.css";

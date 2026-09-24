@@ -1,0 +1,65 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "$description": "Spacing, radii, sizing and elevation. Unitless px numbers so Flutter consumes them directly.",
+  "space": {
+    "0": { "$type": "dimension", "$value": 0 },
+    "1": { "$type": "dimension", "$value": 4 },
+    "2": { "$type": "dimension", "$value": 6 },
+    "3": { "$type": "dimension", "$value": 8 },
+    "4": { "$type": "dimension", "$value": 10 },
+    "5": { "$type": "dimension", "$value": 12 },
+    "6": { "$type": "dimension", "$value": 14 },
+    "7": { "$type": "dimension", "$value": 18 },
+    "8": { "$type": "dimension", "$value": 20 },
+    "9": { "$type": "dimension", "$value": 22 },
+    "10": { "$type": "dimension", "$value": 24 },
+    "12": { "$type": "dimension", "$value": 28 },
+    "14": { "$type": "dimension", "$value": 34 },
+    "16": { "$type": "dimension", "$value": 40 }
+  },
+  "radius": {
+    "sm": { "$type": "dimension", "$value": 8 },
+    "md": { "$type": "dimension", "$value": 12 },
+    "lg": { "$type": "dimension", "$value": 18 },
+    "pill": { "$type": "dimension", "$value": 999 }
+  },
+  "size": {
+    "control": { "$type": "dimension", "$value": 46, "$description": "Input / button height" },
+    "controlSm": { "$type": "dimension", "$value": 40 },
+    "sso": { "$type": "dimension", "$value": 42 },
+    "otpWidth": { "$type": "dimension", "$value": 46 },
+    "otpHeight": { "$type": "dimension", "$value": 56 },
+    "cardMaxWidth": { "$type": "dimension", "$value": 376 },
+    "settingsNavWidth": { "$type": "dimension", "$value": 248 },
+    "settingsMaxWidth": { "$type": "dimension", "$value": 1180 }
+  },
+  "border": {
+    "hairline": { "$type": "dimension", "$value": 0.5 },
+    "thin": { "$type": "dimension", "$value": 1 }
+  },
+  "shadow": {
+    "card": {
+      "$type": "shadow",
+      "$value": {
+        "dark": "0 28px 70px -30px rgba(0,0,0,0.7), 0 1px 0 rgba(255,255,255,0.03) inset",
+        "light": "0 26px 60px -32px rgba(26,28,24,0.3), 0 0 0 0.5px rgba(0,0,0,0.06)"
+      }
+    },
+    "surface": {
+      "$type": "shadow",
+      "$value": { "dark": "none", "light": "0 1px 2px rgba(26,28,24,0.04)" }
+    },
+    "popover": {
+      "$type": "shadow",
+      "$value": { "dark": "0 18px 44px -18px rgba(0,0,0,0.6)", "light": "0 18px 44px -22px rgba(26,28,24,0.28)" }
+    },
+    "focusRing": {
+      "$type": "dimension",
+      "$value": 3.5,
+      "$description": "Focus ring spread, paired with color.accent.soft"
+    }
+  },
+  "breakpoint": {
+    "mobile": { "$type": "dimension", "$value": 760 }
+  }
+}

@@ -251,13 +251,13 @@ const Registration: NextPage = () => {
               ))}
 
               {/* SSO grid */}
-              {hasOidc && (
-                <>
-                  <SsoGrid nodes={oidcNodes} disabled={isLoading} />
-                  <div className="kdiv">
-                    <span>or sign up with email</span>
-                  </div>
-                </>
+              {hasOidc && <SsoGrid nodes={oidcNodes} disabled={isLoading} />}
+
+              {/* Divider between the OAuth providers and the passkey button */}
+              {hasOidc && hasPasskey && (
+                <div className="kdiv">
+                  <span>or</span>
+                </div>
               )}
 
               {/* Passkey */}
@@ -273,9 +273,13 @@ const Registration: NextPage = () => {
                   />
                 ))}
 
-              {hasPasskey && passwordFieldNode && (
+              {/* Divider before the traits/email form — wording depends on
+                  what's directly above it: the SSO grid (step 1, leading into
+                  the email/name fields) or the passkey button (step 2,
+                  leading straight into the password field, no email here) */}
+              {(hasOidc || hasPasskey) && (emailNode || passwordFieldNode) && (
                 <div className="kdiv">
-                  <span>or</span>
+                  <span>{emailNode ? "or sign up with email" : "or"}</span>
                 </div>
               )}
 
